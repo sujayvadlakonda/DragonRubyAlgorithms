@@ -22,7 +22,7 @@ class BreadthFirstSearch
     # Freely customizable to user's liking
     args.state.grid.width     = 30
     args.state.grid.height    = 15
-    args.state.grid.tile_size = 40
+    args.state.grid.cell_size = 40
 
     # Stores which step of the animation is being rendered
     # When the user moves the star or messes with the walls,
@@ -61,7 +61,33 @@ class BreadthFirstSearch
     # We store this value, because we want to remember the value even when
     # the user's cursor is no longer over what they're interacting with, but
     # they are still clicking down on the mouse.
-    args.state.user_input = :none 
+    args.state.click_and_drag = :none 
+
+    # Store the rects of the buttons that control the animation
+    # They are here for user customization
+    # Editing these might require recentering the text inside them
+    # Those values can be found in the render_button methods
+    args.state.buttons.left   = [450, 600, 50, 50]
+    args.state.buttons.center = [500, 600, 200, 50]
+    args.state.buttons.right  = [700, 600, 50, 50]
+
+    # The variables below are related to the slider
+    # They allow the user to customize them
+    # They also give a central location for the render and input methods to get
+    # information from
+    # x & y are the coordinates of the leftmost part of the slider line
+    args.state.slider.x = 400
+    args.state.slider.y = 675
+    # This is the width of the line
+    args.state.slider.w = 360
+    # This is the offset for the circle
+    # Allows the center of the circle to be on the line,
+    # as opposed to the upper right corner
+    args.state.slider.offset = 20
+    # This is the spacing between each of the notches on the slider
+    # Notches are places where the circle can rest on the slider line
+    # There needs to be a notch for each step before the maximum number of steps
+    args.state.slider.spacing = args.state.slider.w.to_f / args.state.max_steps.to_f
   end
 
   # This method is called every frame/tick
@@ -76,10 +102,10 @@ class BreadthFirstSearch
 
   # Draws everything onto the screen
   def render
-    render_animation_buttons
+    render_buttons
     render_slider
-    render_background       
 
+    render_background       
     render_visited 
     render_frontier
     render_walls
@@ -89,44 +115,70 @@ class BreadthFirstSearch
   # The methods below subdivide the task of drawing everything to the screen
 
   # Draws the buttons that control the animation step and state
-  # x, y, w, h can be changed to move the button to a more convenient location
-  def render_animation_buttons
-    render_previous_step_button
-    render_play_button
-    render_next_step_button
+  def render_buttons
+    render_left_button
+    render_center_button
+    render_right_button
   end
 
-  def render_previous_step_button
-    x, y, w, h = 450, 600, 50, 50
-    left_button.rect  = [x, y, w, h, light_gray]
-    left_button.label = [x + 20, y + 35, "<"]
-    outputs.solids << left_button.rect
-    outputs.labels << left_button.label
+  # Draws the button which steps the search backward
+  # Shows the user where to click to move the search backward
+  def render_left_button
+    # Draws the gray button, and a black border
+    # The border separates the buttons visually
+    outputs.solids  << [buttons.left, light_gray]
+    outputs.borders << [buttons.left, black]
+
+    # Renders an explanatory label in the center of the button
+    # Explains to the user what the button does
+    # If the button size is changed, the label might need to be edited as well
+    # to keep the label in the center of the button
+    label_x = buttons.left.x + 20
+    label_y = buttons.left.y + 35
+    outputs.labels  << [label_x, label_y, "<"]
   end
 
-  def render_play_button
-    x, y, w, h = 500, 600, 200, 50
-    text = state.play ? "Pause Animation" : "Play Animation"
-    center_button.rect   = [x, y, w, h, dark_gray]
-    center_button.label  = [x + 37, y + 35, text]
-    outputs.solids << center_button.rect
-    outputs.labels << center_button.label
+  def render_center_button
+    # Draws the gray button, and a black border
+    # The border separates the buttons visually
+    outputs.solids  << [buttons.center, light_gray]
+    outputs.borders << [buttons.center, black]
+
+    # Renders an explanatory label in the center of the button
+    # Explains to the user what the button does
+    # If the button size is changed, the label might need to be edited as well
+    # to keep the label in the center of the button
+    label_x    = buttons.center.x + 37
+    label_y    = buttons.center.y + 35
+    label_text = state.play ? "Pause Animation" : "Play Animation"
+    outputs.labels << [label_x, label_y, label_text]
   end
 
-  def render_next_step_button
-    x, y, w, h = 700, 600, 50, 50
-    right_button.rect  = [x, y, w, h, light_gray]
-    right_button.label = [x + 20, y + 35, ">"]
-    outputs.solids << right_button.rect
-    outputs.labels << right_button.label
+  def render_right_button
+    # Draws the gray button, and a black border
+    # The border separates the buttons visually
+    outputs.solids  << [buttons.right, light_gray]
+    outputs.borders << [buttons.right, black]
+
+    # Renders an explanatory label in the center of the button
+    # Explains to the user what the button does
+    label_x = buttons.right.x + 20
+    label_y = buttons.right.y + 35
+    outputs.labels  << [label_x, label_y, ">"]
   end
 
-  # Draws the slider
-  # Called every tick
+  # Draws the slider so the user can move it and see the progress of the search
   def render_slider
     # Using primitives hides the line under the white circle of the slider
-    outputs.primitives  << [400, 675, 400 + state.max_steps , 675, 0, 0, 0].line 
-    outputs.primitives << [380 + state.anim_steps, 655, 37, 37, 'sprites/circle-white.png'].sprite 
+    # Draws the line
+    outputs.primitives << [slider.x, slider.y, slider.x + slider.w, slider.y].line
+    # The circle needs to be offset so that the center of the circle
+    # overlaps the line instead of the upper right corner of the circle
+    # The circle's x value is also moved based on the current seach step
+    circle_x = (slider.x - slider.offset) + (state.anim_steps * slider.spacing)
+    circle_y = (slider.y - slider.offset)
+    circle_rect = [circle_x, circle_y, 37, 37]
+    outputs.primitives << [circle_rect, 'sprites/circle-white.png'].sprite
   end
 
   # Draws what the grid looks like with nothing on it
@@ -137,7 +189,7 @@ class BreadthFirstSearch
 
   # Draws a rectangle the size of the entire grid to represent unvisited cells
   def render_unvisited
-    outputs.solids << [0, 0, grid.width * grid.tile_size, grid.height * grid.tile_size, unvisited_color]
+    outputs.solids << [scale_up([0, 0, grid.width, grid.height]), unvisited_color]
   end
 
   # Draws grid lines to show the division of the grid into cells
@@ -151,45 +203,65 @@ class BreadthFirstSearch
     end
   end
 
-  # Tile Size is used when rendering to allow the grid to be scaled up or down
-
   # Easy way to draw vertical lines given an index
   def vertical_line column
-    [column * grid.tile_size, 0, column * grid.tile_size, grid.height * grid.tile_size, grid_line_color] 
+    scale_up([column, 0, column, grid.height])
   end
 
   # Easy way to draw horizontal lines given an index
   def horizontal_line row
-    [0, row * grid.tile_size, grid.width * grid.tile_size, row * grid.tile_size, grid_line_color]
+    scale_up([0, row, grid.width, row])
   end
 
   # Draws the area that is going to be searched from
   # The frontier is the most outward parts of the search
   def render_frontier
-    state.frontier.each do |x, y| 
-      outputs.solids << [x * grid.tile_size, y * grid.tile_size, grid.tile_size, grid.tile_size, frontier_color]
+    state.frontier.each do |cell| 
+      outputs.solids << [scale_up(cell), frontier_color]
     end
   end
 
   # Draws the walls
   def render_walls
-    state.walls.each_key do |x, y| 
-      outputs.solids << [x * grid.tile_size, y * grid.tile_size, grid.tile_size, grid.tile_size, wall_color]
+    state.walls.each_key do |wall| 
+      outputs.solids << [scale_up(wall), wall_color]
     end
   end
 
   # Renders cells that have been searched in the appropriate color
   def render_visited
-    state.visited.each_key do |x, y| 
-      outputs.solids << [x * grid.tile_size, y * grid.tile_size, grid.tile_size, grid.tile_size, visited_color]
+    state.visited.each_key do |cell| 
+      outputs.solids << [scale_up(cell), visited_color]
     end
   end
 
   # Renders the star
   def render_star
-  outputs.sprites << [state.star.x * grid.tile_size, state.star.y * grid.tile_size, grid.tile_size, grid.tile_size, 'star.png']
+    outputs.sprites << [scale_up(state.star), 'star.png']
   end 
 
+  # In code, the cells are represented as 1x1 rectangles
+  # When drawn, the cells are larger than 1x1 rectangles
+  # This method is used to scale up cells, and lines
+  # Objects are scaled up according to the grid.cell_size variable
+  # This allows for easy customization of the visual scale of the grid
+  def scale_up(cell)
+    # Prevents the original value of cell from being edited
+    cell = cell.clone
+
+    # If cell is just an x and y coordinate
+    if cell.size == 2
+      # Add a width and height of 1
+      cell << 1
+      cell << 1
+    end
+
+    # Scale all the values up
+    cell.map! { |value| value * grid.cell_size }
+
+    # Returns the scaled up cell
+    cell
+  end
 
   # This method processes user input every tick
   def input
@@ -199,8 +271,8 @@ class BreadthFirstSearch
     # The inputs that are non-button are separately controlled
     # Because the code needs to remember what the user was editing
     # even if the mouse is no longer over the relevant object
-    detect_user_input          
-    process_user_input         
+    detect_click_and_drag          
+    process_click_and_drag         
   end
 
   # Detects and Process input for each button
@@ -213,7 +285,7 @@ class BreadthFirstSearch
   # Controls the play/pause button
   # Inverses whether the animation is playing or not when clicked
   def input_play_button
-    if animation_center_button_clicked?
+    if center_button_clicked? or inputs.keyboard.key_down.space
       state.play = !state.play         
     end
   end
@@ -221,7 +293,7 @@ class BreadthFirstSearch
   # Checks if the next step button is clicked
   # If it is, it pauses the animation and moves the search one step forward
   def input_next_step_button
-    if animation_right_button_clicked?
+    if right_button_clicked?
       state.play = false              
       state.anim_steps += 1           
       calc(false)                     
@@ -231,7 +303,7 @@ class BreadthFirstSearch
   # Checks if the previous step button is clicked
   # If it is, it pauses the animation and moves the search one step backward
   def input_previous_step_button 
-    if animation_left_button_clicked?
+    if left_button_clicked?
       state.play = false
       state.anim_steps -= 1
       recalculate
@@ -241,29 +313,29 @@ class BreadthFirstSearch
   # Determines what the user is editing and stores the value
   # Storing the value allows the user to continue the same edit as long as the
   # mouse left click is held
-  def detect_user_input
+  def detect_click_and_drag
     if inputs.mouse.up                  
-      state.user_input = :none          
+      state.click_and_drag = :none          
     elsif star_clicked?                 
-      state.user_input = :star          
+      state.click_and_drag = :star          
     elsif wall_clicked?                 
-      state.user_input = :remove_wall   
+      state.click_and_drag = :remove_wall   
     elsif grid_clicked?                 
-      state.user_input = :add_wall      
+      state.click_and_drag = :add_wall      
     elsif slider_clicked?               
-      state.user_input = :slider        
+      state.click_and_drag = :slider        
     end
   end
 
   # Processes input based on what the user is currently editing
-  def process_user_input
-    if state.user_input == :slider          
+  def process_click_and_drag
+    if state.click_and_drag == :slider          
       input_slider                          
-    elsif state.user_input == :star         
+    elsif state.click_and_drag == :star         
       input_star                            
-    elsif state.user_input == :remove_wall  
+    elsif state.click_and_drag == :remove_wall  
       input_remove_wall                     
-    elsif state.user_input == :add_wall     
+    elsif state.click_and_drag == :add_wall     
       input_add_wall                        
     end
   end
@@ -387,8 +459,8 @@ class BreadthFirstSearch
   # and moves up and down, the star is supposed to move along the grid as well
   # Finding the grid closest to the mouse helps with this
   def grid_closest_to_mouse
-    x = (inputs.mouse.point.x / grid.tile_size).to_i 
-    y = (inputs.mouse.point.y / grid.tile_size).to_i 
+    x = (inputs.mouse.point.x / grid.cell_size).to_i 
+    y = (inputs.mouse.point.y / grid.cell_size).to_i 
     x = grid.width - 1 if x > grid.width - 1 
     y = grid.height - 1 if y > grid.height - 1 
     [x, y] 
@@ -396,15 +468,15 @@ class BreadthFirstSearch
 
 
   # These methods detect when the buttons are clicked
-  def animation_center_button_clicked?
+  def center_button_clicked?
     inputs.mouse.up && inputs.mouse.point.inside_rect?([500, 600, 200, 50])
   end
 
-  def animation_right_button_clicked?
+  def right_button_clicked?
     inputs.mouse.up && inputs.mouse.point.inside_rect?([700, 600, 50, 50])
   end
 
-  def animation_left_button_clicked?
+  def left_button_clicked?
     inputs.mouse.up && inputs.mouse.point.inside_rect?([450, 600, 50, 50])
   end
 
@@ -415,7 +487,7 @@ class BreadthFirstSearch
 
   # Signal that the user is going to be moving the star
   def star_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?([state.star.x * grid.tile_size, state.star.y * grid.tile_size, grid.tile_size, grid.tile_size])
+    inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.star))
   end
 
   # Signal that the user is going to be removing walls
@@ -431,19 +503,17 @@ class BreadthFirstSearch
   # Returns whether the mouse is inside of a wall
   # Part of the condition that checks whether the user is removing a wall
   def mouse_inside_a_wall?
-    state.walls.each_key do |x, y|
-      return true if inputs.mouse.point.inside_rect?([x * grid.tile_size, y * grid.tile_size, grid.tile_size, grid.tile_size])
+    state.walls.each_key do | wall |
+      return true if inputs.mouse.point.inside_rect?(scale_up(wall))
     end
+
     false
   end
 
   # Returns whether the mouse is inside of a grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid?
-    inputs.mouse.point.x >= 0 &&
-      inputs.mouse.point.y >= 0 &&
-      inputs.mouse.point.x < grid.width * grid.tile_size &&
-      inputs.mouse.point.y < grid.height * grid.tile_size
+    inputs.mouse.point.inside_rect?(scale_up([0, 0, grid.width, grid.height]))
   end
 
   # These methods provide handy aliases to colors
@@ -476,22 +546,21 @@ class BreadthFirstSearch
     [170, 170, 170]
   end
 
+  def black
+    [0, 0, 0]
+  end
 
   # These methods make the code more concise
   def grid
     state.grid
   end
 
-  def right_button
-    state.right_button
+  def buttons
+    state.buttons
   end
 
-  def center_button
-    state.center_button
-  end
-
-  def left_button
-    state.left_button
+  def slider
+    state.slider
   end
 end
 
