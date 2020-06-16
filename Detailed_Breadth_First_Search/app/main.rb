@@ -19,7 +19,7 @@
 
 # This search numbers the order in which new cells are explored
 # The next cell from where the search will continue is highlighted yellow
-# And the cells that will be considered for expansion will be bordered in green
+# And the cells that will be considered for expansion are in semi-transparent green
 
 class DetailedBreadthFirstSearch
   attr_gtk
@@ -258,11 +258,11 @@ class DetailedBreadthFirstSearch
     next_frontier = state.frontier[0]
     outputs.solids << [scale_up(next_frontier), highlighter_yellow]
 
-    # Surrounds the next frontier's neighbors in light green
+    # Neighbors have a semi-transparent green layer over them
     # Unless the neighbor is a wall
     adjacent_neighbors(next_frontier).each do |neighbor|
       unless state.walls.has_key?(neighbor)
-        outputs.borders << [scale_up(neighbor), highlighter_green]
+        outputs.solids << [scale_up(neighbor), highlighter_green, 70]
       end
     end
   end
