@@ -52,7 +52,8 @@ class EarlyExitBreadthFirstSearch
     # from the center outward
     args.state.visited    = {}
     args.state.frontier   = []
-
+    args.state.came_from  = {}
+    args.state.path       = {}
 
     # What the user is currently editing on the grid
     # Possible values are: :none, :slider, :star, :remove_wall, :add_wall
@@ -68,6 +69,10 @@ class EarlyExitBreadthFirstSearch
   # User input is processed, and
   # The next step in the search is calculated
   def tick
+    if state.visited.empty?
+      state.max_steps.times { calc }
+      calc_path
+    end
     render 
     input  
   end
@@ -75,9 +80,9 @@ class EarlyExitBreadthFirstSearch
   # Draws everything onto the screen
   def render
     render_background       
-    render_visited 
-    render_frontier
+    render_heat_map
     render_walls
+    render_path
     render_star
     render_target
   end
@@ -92,17 +97,21 @@ class EarlyExitBreadthFirstSearch
 
   # Draws a rectangle the size of the entire grid to represent unvisited cells
   def render_unvisited
-    outputs.solids << [scale_up([0, 0, grid.width, grid.height]), unvisited_color]
+    rect = [0, 0, grid.width, grid.height]
+    outputs.solids << [scale_up(rect), unvisited_color]
+    outputs.solids << [early_exit_scale_up(rect), unvisited_color]
   end
 
   # Draws grid lines to show the division of the grid into cells
   def render_grid_lines
     for x in 0..grid.width
       outputs.lines << vertical_line(x)
+      outputs.lines << early_exit_vertical_line(x)
     end
 
     for y in 0..grid.height
       outputs.lines << horizontal_line(y) 
+      outputs.lines << early_exit_horizontal_line(y)
     end
   end
 
@@ -114,6 +123,16 @@ class EarlyExitBreadthFirstSearch
   # Easy way to draw horizontal lines given an index
   def horizontal_line row
     scale_up([0, row, grid.width, row])
+  end
+
+  # Easy way to draw vertical lines given an index
+  def early_exit_vertical_line column
+    scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
+  end
+
+  # Easy way to draw horizontal lines given an index
+  def early_exit_horizontal_line row
+    scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
   end
 
   # Draws the area that is going to be searched from
@@ -128,6 +147,7 @@ class EarlyExitBreadthFirstSearch
   def render_walls
     state.walls.each_key do |wall| 
       outputs.solids << [scale_up(wall), wall_color]
+      outputs.solids << [early_exit_scale_up(wall), wall_color]
     end
   end
 
@@ -141,12 +161,48 @@ class EarlyExitBreadthFirstSearch
   # Renders the star
   def render_star
     outputs.sprites << [scale_up(state.star), 'star.png']
+    outputs.sprites << [early_exit_scale_up(state.star), 'star.png']
   end 
 
   # Renders the target
   def render_target
     outputs.sprites << [scale_up(state.target), 'target.png']
+    outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
   end 
+
+  def render_path
+    state.path.each_key do | cell |
+      outputs.solids << [scale_up(cell), path_color]
+      outputs.solids << [early_exit_scale_up(cell), path_color]
+    end
+  end
+
+  def calc_path
+    endpoint = state.target
+    while endpoint
+      state.path[endpoint] = true
+      endpoint = state.came_from[endpoint]
+    end
+  end
+
+  # Representation of how far away visited cells are from the star
+  def render_heat_map
+    state.visited.each_key do | visited_cell |
+      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+      max_distance = grid.width + grid.height
+      alpha = 255.to_i * distance.to_i / max_distance.to_i
+      outputs.solids << [scale_up(visited_cell), red, alpha]
+      outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+    end
+  end
+
+  # Translates the given cell grid.width + 1 to the right and then scales up
+  # Works on rects but NOT on lines
+  def early_exit_scale_up(cell)
+    cell_clone = cell.clone
+    cell_clone.x += grid.width + 1
+    scale_up(cell_clone)
+  end
 
   # In code, the cells are represented as 1x1 rectangles
   # When drawn, the cells are larger than 1x1 rectangles
@@ -278,11 +334,10 @@ class EarlyExitBreadthFirstSearch
   # with the current grid as the initial state of the grid
   def recalculate
     # Resets the search
-    state.frontier = [] 
-    state.visited = {} 
-
-    # Moves the animation forward one step at a time
-    state.anim_steps.times { calc } 
+    state.frontier  = [] 
+    state.visited   = {} 
+    state.came_from = {} 
+    state.path      = {}
   end
 
 
@@ -295,10 +350,11 @@ class EarlyExitBreadthFirstSearch
   # It is false when the search is being recalculated after user editing the grid
   def calc
     # The setup to the search
-    # Runs once when the there is no frontier or visited cells
-    if state.frontier.empty? && state.visited.empty?  
-      state.frontier << state.star                   
+    # Runs once when the there are no visited cells
+    if state.visited.empty?  
       state.visited[state.star] = true              
+      state.frontier << state.star                   
+      state.came_from[state.star] = nil
     end
 
     # A step in the search
@@ -310,8 +366,9 @@ class EarlyExitBreadthFirstSearch
         # That have not been visited and are not walls
         unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited
-          state.frontier << neighbor 
           state.visited[neighbor] = true 
+          state.frontier << neighbor 
+          state.came_from[neighbor] = new_frontier
         end
       end
     end
@@ -323,10 +380,11 @@ class EarlyExitBreadthFirstSearch
   def adjacent_neighbors(x, y)
     neighbors = [] 
 
-    neighbors << [x, y + 1] unless y == grid.height - 1 
+    # Clockwise pattern from left neighbor, gives a zigzag path
     neighbors << [x + 1, y] unless x == grid.width - 1 
     neighbors << [x, y - 1] unless y == 0 
     neighbors << [x - 1, y] unless x == 0 
+    neighbors << [x, y + 1] unless y == grid.height - 1 
 
     neighbors 
   end
@@ -417,6 +475,15 @@ class EarlyExitBreadthFirstSearch
   # Button Outline
   def black
     [0, 0, 0]
+  end
+
+  # Pastel White
+  def path_color
+    [231, 230, 228]
+  end
+
+  def red
+    [255, 0 , 0]
   end
 
   # These methods make the code more concise
