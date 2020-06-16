@@ -1,16 +1,18 @@
 # A visual demonstration of a breadth first search
 # Inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
-# The grid can be edited
-# The star can be moved
-# Walls can be added and removed by clicking or dragging on the cells
+# An animation that can respond to user input in real time
+
+# A breadth first search expands in all directions one step at a time
+# The frontier is a queue of cells to be expanded from
+# The visited hash allows quick lookups of cells that have been expanded from
+# The walls hash allows quick lookup of whether a cell is a wall
 
 # The breadth first search starts by adding the red star to the frontier array
 # and marking it as visited
-# The frontier array shows the outward edges of the search
 # Each step a cell is removed from the front of the frontier array (queue)
-# Its neighbors are all marked visited
 # Unless the neighbor is a wall or visited, it is added to the frontier array
+# The neighbor is then marked as visited
 
 # The frontier is blue
 # Visited cells are light brown
@@ -20,6 +22,9 @@
 # This search numbers the order in which new cells are explored
 # The next cell from where the search will continue is highlighted yellow
 # And the cells that will be considered for expansion are in semi-transparent green
+
+# The star can be moved by clicking and dragging
+# Walls can be added and removed by clicking and dragging
 
 class DetailedBreadthFirstSearch
   attr_gtk

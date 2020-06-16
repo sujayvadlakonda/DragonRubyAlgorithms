@@ -19,6 +19,9 @@
 # Walls are camo green
 # Even when walls are visited, they will maintain their wall color
 
+# The star can be moved by clicking and dragging
+# Walls can be added and removed by clicking and dragging
+
 class BreadthFirstSearch
   attr_gtk
 
