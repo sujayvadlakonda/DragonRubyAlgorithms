@@ -349,7 +349,7 @@ class DetailedBreadthFirstSearch
         # Although normally recalculate would be called here
         # because the right button only moves the search forward
         # We can just do that
-        calc(false)
+        calc
       end
     end
   end
@@ -364,7 +364,7 @@ class DetailedBreadthFirstSearch
     state.cell_numbers = []
 
     # Moves the animation forward one step at a time
-    state.anim_steps.times { calc(false) } 
+    state.anim_steps.times { calc } 
   end
 
 
@@ -457,19 +457,7 @@ class DetailedBreadthFirstSearch
   # Moves the search forward one step
   # Parameter called_from_tick is true if it is called from the tick method
   # It is false when the search is being recalculated after user editing the grid
-  def calc(called_from_tick)
-
-    # If the search is being moved forward by the tick method
-    if called_from_tick 
-      # It should not if the maximum animation step has been reached
-      return unless state.anim_steps < state.max_steps 
-      # Or if the animation is paused
-      return unless state.play                         
-      # The current step of the search that is being animated is incremented
-      # This variable is used for recalculating the search when the grid is edited
-      state.anim_steps += 1 
-    end
-
+  def calc
     # The setup to the search
     # Runs once when the there is no frontier or visited cells
     if state.frontier.empty? && state.visited.empty?  
