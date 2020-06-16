@@ -1,19 +1,3 @@
-# A visual demonstration of a breadth first search
-# Inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
-
-# An animation that can respond to user input in real time
-
-# The breadth first search starts by adding the red star to the frontier array
-# and marking it as visited
-# Each step a cell is removed from the front of the frontier array (queue)
-# Its neighbors are all marked visited
-# Unless the neighbor is a wall or visited, it is added to the frontier array
-
-# The frontier is blue
-# Visited cells are light brown
-# Walls are camo green
-# Even when walls are visited, they will maintain their wall color
-
 class BreadthFirstSearch
   attr_gtk
 

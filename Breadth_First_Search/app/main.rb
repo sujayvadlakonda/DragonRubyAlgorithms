@@ -3,11 +3,16 @@
 
 # An animation that can respond to user input in real time
 
+# A breadth first search expands in all directions one step at a time
+# The frontier is a queue of cells to be expanded from
+# The visited hash allows quick lookups of cells that have been expanded from
+# The walls hash allows quick lookup of whether a cell is a wall
+
 # The breadth first search starts by adding the red star to the frontier array
 # and marking it as visited
 # Each step a cell is removed from the front of the frontier array (queue)
-# Its neighbors are all marked visited
 # Unless the neighbor is a wall or visited, it is added to the frontier array
+# The neighbor is then marked as visited
 
 # The frontier is blue
 # Visited cells are light brown
@@ -126,7 +131,7 @@ class BreadthFirstSearch
   def render_left_button
     # Draws the gray button, and a black border
     # The border separates the buttons visually
-    outputs.solids  << [buttons.left, light_gray]
+    outputs.solids  << [buttons.left, gray]
     outputs.borders << [buttons.left, black]
 
     # Renders an explanatory label in the center of the button
@@ -141,7 +146,7 @@ class BreadthFirstSearch
   def render_center_button
     # Draws the gray button, and a black border
     # The border separates the buttons visually
-    outputs.solids  << [buttons.center, light_gray]
+    outputs.solids  << [buttons.center, gray]
     outputs.borders << [buttons.center, black]
 
     # Renders an explanatory label in the center of the button
@@ -157,7 +162,7 @@ class BreadthFirstSearch
   def render_right_button
     # Draws the gray button, and a black border
     # The border separates the buttons visually
-    outputs.solids  << [buttons.right, light_gray]
+    outputs.solids  << [buttons.right, gray]
     outputs.borders << [buttons.right, black]
 
     # Renders an explanatory label in the center of the button
@@ -178,7 +183,7 @@ class BreadthFirstSearch
     circle_x = (slider.x - slider.offset) + (state.anim_steps * slider.spacing)
     circle_y = (slider.y - slider.offset)
     circle_rect = [circle_x, circle_y, 37, 37]
-    outputs.primitives << [circle_rect, 'sprites/circle-white.png'].sprite
+    outputs.primitives << [circle_rect, 'circle-white.png'].sprite
   end
 
   # Draws what the grid looks like with nothing on it
@@ -264,27 +269,38 @@ class BreadthFirstSearch
   end
 
   # This method processes user input every tick
+  # Allows the user to interact with the breadth first search
   def input
     # Checks whether any of the buttons are being clicked
     input_buttons
 
-    # The inputs that are non-button are separately controlled
-    # Because the code needs to remember what the user was editing
-    # even if the mouse is no longer over the relevant object
+    # The detection and processing of click and drag inputs are separate
+    # The program has to remember that the user is dragging an object
+    # even when the mouse is no longer over that object
     detect_click_and_drag          
     process_click_and_drag         
   end
 
   # Detects and Process input for each button
   def input_buttons
-    input_play_button          
-    input_previous_step_button 
+    input_left_button 
+    input_center_button          
     input_next_step_button     
+  end
+
+  # Checks if the previous step button is clicked
+  # If it is, it pauses the animation and moves the search one step backward
+  def input_left_button 
+    if left_button_clicked?
+      state.play = false
+      state.anim_steps -= 1
+      recalculate
+    end
   end
 
   # Controls the play/pause button
   # Inverses whether the animation is playing or not when clicked
-  def input_play_button
+  def input_center_button
     if center_button_clicked? or inputs.keyboard.key_down.space
       state.play = !state.play         
     end
@@ -297,16 +313,6 @@ class BreadthFirstSearch
       state.play = false              
       state.anim_steps += 1           
       calc(false)                     
-    end
-  end
-
-  # Checks if the previous step button is clicked
-  # If it is, it pauses the animation and moves the search one step backward
-  def input_previous_step_button 
-    if left_button_clicked?
-      state.play = false
-      state.anim_steps -= 1
-      recalculate
     end
   end
 
@@ -327,30 +333,17 @@ class BreadthFirstSearch
     end
   end
 
-  # Processes input based on what the user is currently editing
+  # Processes click and drag based on what the user is currently dragging
   def process_click_and_drag
-    if state.click_and_drag == :slider          
-      input_slider                          
-    elsif state.click_and_drag == :star         
+    if state.click_and_drag == :star         
       input_star                            
     elsif state.click_and_drag == :remove_wall  
       input_remove_wall                     
     elsif state.click_and_drag == :add_wall     
       input_add_wall                        
+    elsif state.click_and_drag == :slider          
+      input_slider                          
     end
-  end
-
-  # This method is called when the user is editing the slider
-  # It pauses the animation and moves the white circle to the closest integer point
-  # on the slider
-  def input_slider
-    state.play = false 
-    slider_x = inputs.mouse.point.x.to_i 
-    slider_x = 400 if slider_x < 400 
-    slider_x = 850 if slider_x > 850 
-    slider_x -= 20 
-    state.anim_steps = slider_x - 380 
-    recalculate 
   end
 
   # Moves the star to the grid closest to the mouse
@@ -358,8 +351,7 @@ class BreadthFirstSearch
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star
     old_star = state.star.clone 
-    x, y = *grid_closest_to_mouse 
-    state.star = [x, y] if x && y 
+    state.star = cell_closest_to_mouse
     unless old_star == state.star 
       recalculate 
     end
@@ -369,20 +361,40 @@ class BreadthFirstSearch
   def input_remove_wall
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
+    # Recalculations should only occur when a wall is actually deleted
     if mouse_inside_grid? 
-      state.walls.delete(grid_closest_to_mouse) 
-      recalculate 
+      if state.walls.has_key?(cell_closest_to_mouse)
+        state.walls.delete(cell_closest_to_mouse) 
+        recalculate 
+      end
     end
   end
 
   # Adds walls at cells under the cursor
   def input_add_wall
     if mouse_inside_grid? 
-      # Adds a wall to the hash
-      # We can use the grid closest to mouse, because the cursor is inside the grid
-      state.walls[grid_closest_to_mouse] = true 
+      state.walls[cell_closest_to_mouse] = true 
       recalculate 
     end
+  end
+
+  # This method is called when the user is editing the slider
+  # It pauses the animation and moves the white circle to the closest integer point
+  # on the slider
+  # Changes the step of the search to be animated
+  def input_slider
+    state.play = false 
+    mouse_x = inputs.mouse.point.x
+
+    # Bounds the mouse_x to the closest x value on the slider line
+    mouse_x = slider.x if mouse_x < slider.x 
+    mouse_x = slider.x + slider.w if mouse_x > slider.x + slider.w 
+
+    # Sets the current search step to the one represented by the mouse x value
+    # The slider's circle moves due to the render_slider method using anim_steps
+    state.anim_steps = ((mouse_x - slider.x) / slider.spacing).to_i
+
+    recalculate 
   end
 
   # Whenever the user edits the grid,
@@ -444,7 +456,7 @@ class BreadthFirstSearch
 
   # Returns a list of adjacent cells
   # Used to determine what the next cells to be added to the frontier are
-  def adjacent_neighbors x, y
+  def adjacent_neighbors(x, y)
     neighbors = [] 
 
     neighbors << [x, y + 1] unless y == grid.height - 1 
@@ -457,32 +469,38 @@ class BreadthFirstSearch
 
   # When the user grabs the star and puts their cursor to the far right
   # and moves up and down, the star is supposed to move along the grid as well
-  # Finding the grid closest to the mouse helps with this
-  def grid_closest_to_mouse
+  # Finding the cell closest to the mouse helps with this
+  def cell_closest_to_mouse
+    # Closest cell to the mouse
     x = (inputs.mouse.point.x / grid.cell_size).to_i 
     y = (inputs.mouse.point.y / grid.cell_size).to_i 
+    # Bound x and y to the grid
     x = grid.width - 1 if x > grid.width - 1 
     y = grid.height - 1 if y > grid.height - 1 
+    # Return closest cell
     [x, y] 
   end
 
-
   # These methods detect when the buttons are clicked
+  def left_button_clicked?
+    inputs.mouse.up && inputs.mouse.point.inside_rect?(buttons.left)
+  end
+
   def center_button_clicked?
-    inputs.mouse.up && inputs.mouse.point.inside_rect?([500, 600, 200, 50])
+    inputs.mouse.up && inputs.mouse.point.inside_rect?(buttons.center)
   end
 
   def right_button_clicked?
-    inputs.mouse.up && inputs.mouse.point.inside_rect?([700, 600, 50, 50])
-  end
-
-  def left_button_clicked?
-    inputs.mouse.up && inputs.mouse.point.inside_rect?([450, 600, 50, 50])
+    inputs.mouse.up && inputs.mouse.point.inside_rect?(buttons.right)
   end
 
   # Signal that the user is going to be moving the slider
+  # Is the mouse down on the circle of the slider?
   def slider_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?([380 + state.anim_steps, 655, 37, 37])
+    circle_x = (slider.x - slider.offset) + (state.anim_steps * slider.spacing)
+    circle_y = (slider.y - slider.offset)
+    circle_rect = [circle_x, circle_y, 37, 37]
+    inputs.mouse.down && inputs.mouse.point.inside_rect?(circle_rect)
   end
 
   # Signal that the user is going to be moving the star
@@ -516,36 +534,40 @@ class BreadthFirstSearch
     inputs.mouse.point.inside_rect?(scale_up([0, 0, grid.width, grid.height]))
   end
 
+
   # These methods provide handy aliases to colors
+
+  # Light brown
   def unvisited_color
-    [221, 212, 213] # Light brown
+    [221, 212, 213] 
   end
 
+  # White
   def grid_line_color
-    [255, 255, 255] # White
+    [255, 255, 255] 
   end
 
+  # Dark Brown
   def visited_color
-    [204, 191, 179] # Dark Brown
+    [204, 191, 179] 
   end
 
+  # Blue
   def frontier_color
-    [103, 136, 204] # Blue
+    [103, 136, 204] 
   end
 
+  # Camo Green
   def wall_color
-    [134, 134, 120] # Camo Green
+    [134, 134, 120] 
   end
 
-  # Grays are used in the buttons
-  def light_gray
+  # Button Background
+  def gray
     [190, 190, 190]
   end
 
-  def dark_gray
-    [170, 170, 170]
-  end
-
+  # Button Outline
   def black
     [0, 0, 0]
   end
@@ -564,14 +586,18 @@ class BreadthFirstSearch
   end
 end
 
-
+# Method that is called by DragonRuby periodically
+# Used for updating animations and calculations
 def tick args
+
+  # Pressing r will reset the application
   if args.inputs.keyboard.key_down.r
     args.gtk.reset
     reset
     return
   end
 
+  # Every tick, new args are passed, and the Breadth First Search tick is called
   $breadth_first_search ||= BreadthFirstSearch.new(args)
   $breadth_first_search.args = args
   $breadth_first_search.tick
