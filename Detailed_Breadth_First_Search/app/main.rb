@@ -167,7 +167,7 @@ class DetailedBreadthFirstSearch
     circle_x = (slider.x - slider.offset) + (state.anim_steps * slider.spacing)
     circle_y = (slider.y - slider.offset)
     circle_rect = [circle_x, circle_y, 37, 37]
-    outputs.primitives << [circle_rect, 'sprites/circle-white.png'].sprite
+    outputs.primitives << [circle_rect, 'circle-white.png'].sprite
   end
 
   # Draws what the grid looks like with nothing on it
