@@ -102,7 +102,13 @@ class BreadthFirstSearch
   def tick
     render 
     input  
-    calc(true)
+    # If animation is playing, and max steps have not been reached
+    # Move the search a step forward
+    if state.play && state.anim_steps < state.max_steps
+      # Variable that tells the program what step to recalculate up to
+      state.anim_steps += 1 
+      calc
+    end
   end
 
   # Draws everything onto the screen
@@ -332,7 +338,7 @@ class BreadthFirstSearch
     if right_button_clicked?
       state.play = false              
       state.anim_steps += 1           
-      calc(false)                     
+      calc
     end
   end
 
@@ -426,7 +432,7 @@ class BreadthFirstSearch
     state.visited = {} 
 
     # Moves the animation forward one step at a time
-    state.anim_steps.times { calc(false) } 
+    state.anim_steps.times { calc } 
   end
 
 
@@ -437,18 +443,7 @@ class BreadthFirstSearch
   # Moves the search forward one step
   # Parameter called_from_tick is true if it is called from the tick method
   # It is false when the search is being recalculated after user editing the grid
-  def calc(called_from_tick)
-
-    # If the search is being moved forward by the tick method
-    if called_from_tick 
-      # It should not if the maximum animation step has been reached
-      return unless state.anim_steps < state.max_steps 
-      # Or if the animation is paused
-      return unless state.play                         
-      # The current step of the search that is being animated is incremented
-      # This variable is used for recalculating the search when the grid is edited
-      state.anim_steps += 1 
-    end
+  def calc
 
     # The setup to the search
     # Runs once when the there is no frontier or visited cells
