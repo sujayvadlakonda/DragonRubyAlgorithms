@@ -131,7 +131,7 @@ class DetailedBreadthFirstSearch
   def render_left_button
     # Draws the gray button, and a black border
     # The border separates the buttons visually
-    outputs.solids  << [buttons.left, light_gray]
+    outputs.solids  << [buttons.left, gray]
     outputs.borders << [buttons.left, black]
 
     # Renders an explanatory label in the center of the button
@@ -146,7 +146,7 @@ class DetailedBreadthFirstSearch
   def render_right_button
     # Draws the gray button, and a black border
     # The border separates the buttons visually
-    outputs.solids  << [buttons.right, light_gray]
+    outputs.solids  << [buttons.right, gray]
     outputs.borders << [buttons.right, black]
 
     # Renders an explanatory label in the center of the button
@@ -244,7 +244,7 @@ class DetailedBreadthFirstSearch
       label_x = (cell.x * grid.cell_size) + grid.cell_size / 2 - 5
       label_y = (cell.y * grid.cell_size) + (grid.cell_size / 2) + 5
 
-      outputs.labels << [label_x, label_y, (index + 1).to_s, frontier_number_color]
+      outputs.labels << [label_x, label_y, (index + 1).to_s]
     end
   end
 
@@ -564,47 +564,48 @@ class DetailedBreadthFirstSearch
   end
 
   # These methods provide handy aliases to colors
+
+  # Light brown
   def unvisited_color
-    [221, 212, 213] # Light brown
+    [221, 212, 213] 
   end
 
+  # White
   def grid_line_color
-    [255, 255, 255] # White
+    [255, 255, 255] 
   end
 
+  # Dark Brown
   def visited_color
-    [204, 191, 179] # Dark Brown
+    [204, 191, 179] 
   end
 
+  # Blue
   def frontier_color
-    [103, 136, 204] # Blue
+    [103, 136, 204] 
   end
 
+  # Camo Green
   def wall_color
-    [134, 134, 120] # Camo Green
+    [134, 134, 120] 
   end
 
-  def frontier_number_color
-    [208, 198, 199] # Gray
-  end
-
+  # Next frontier to be expanded
   def highlighter_yellow
     [214, 231, 125]
   end
 
+  # The neighbors of the next frontier to be expanded
   def highlighter_green
     [65, 191, 127]
   end
 
-  # Grays are used in the buttons
-  def light_gray
+  # Button background
+  def gray
     [190, 190, 190]
   end
 
-  def dark_gray
-    [170, 170, 170]
-  end
-
+  # Button outline
   def black
     [0, 0, 0]
   end
@@ -625,6 +626,7 @@ end
 
 
 def tick args
+  # Pressing r resets the program
   if args.inputs.keyboard.key_down.r
     args.gtk.reset
     reset
