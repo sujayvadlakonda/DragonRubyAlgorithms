@@ -272,13 +272,20 @@ class DetailedBreadthFirstSearch
   # Cells in the frontier array and visited hash and walls hash are stored as x & y
   # Scaling up cells and lines when rendering allows omitting of width and height
   def scale_up(cell)
+    # Prevents the original value of cell from being edited
     cell = cell.clone
+
+    # If cell is just an x and y coordinate
+    if cell.size == 2
+      # Add a width and height of 1
+      cell << 1
+      cell << 1
+    end
+
+    # Scale all the values up
     cell.map! { |value| value * grid.cell_size }
 
-    # The parameter cell is either x & y values or a rect
-    # If cell is just an x & y value, add a width and height of cell size
-    2.times { cell << grid.cell_size } if cell.size == 2
-
+    # Returns the scaled up cell
     cell
   end
 
@@ -414,8 +421,7 @@ class DetailedBreadthFirstSearch
   # Called whenever the user is dragging the star 
   def input_star
     old_star = state.star.clone 
-    x, y = *grid_closest_to_mouse 
-    state.star = [x, y] if x && y 
+    state.star = cell_closest_to_mouse 
     unless old_star == state.star 
       recalculate 
     end
@@ -425,9 +431,12 @@ class DetailedBreadthFirstSearch
   def input_remove_wall
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
+    # Recalculations should only occur when a wall is actually deleted
     if mouse_inside_grid? 
-      state.walls.delete(grid_closest_to_mouse) 
-      recalculate 
+      if state.walls.has_key?(cell_closest_to_mouse)
+        state.walls.delete(cell_closest_to_mouse) 
+        recalculate 
+      end
     end
   end
 
@@ -436,7 +445,7 @@ class DetailedBreadthFirstSearch
     if mouse_inside_grid? 
       # Adds a wall to the hash
       # We can use the grid closest to mouse, because the cursor is inside the grid
-      state.walls[grid_closest_to_mouse] = true 
+      state.walls[cell_closest_to_mouse] = true 
       recalculate 
     end
   end
@@ -504,7 +513,7 @@ class DetailedBreadthFirstSearch
   # When the user grabs the star and puts their cursor to the far right
   # and moves up and down, the star is supposed to move along the grid as well
   # Finding the grid closest to the mouse helps with this
-  def grid_closest_to_mouse
+  def cell_closest_to_mouse
     x = (inputs.mouse.point.x / grid.cell_size).to_i 
     y = (inputs.mouse.point.y / grid.cell_size).to_i 
     x = grid.width - 1 if x > grid.width - 1 
@@ -532,7 +541,7 @@ class DetailedBreadthFirstSearch
 
   # Signal that the user is going to be moving the star
   def star_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?([state.star.x * grid.cell_size, state.star.y * grid.cell_size, grid.cell_size, grid.cell_size])
+    inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.star))
   end
 
   # Signal that the user is going to be removing walls
@@ -548,19 +557,17 @@ class DetailedBreadthFirstSearch
   # Returns whether the mouse is inside of a wall
   # Part of the condition that checks whether the user is removing a wall
   def mouse_inside_a_wall?
-    state.walls.each_key do |x, y|
-      return true if inputs.mouse.point.inside_rect?([x * grid.cell_size, y * grid.cell_size, grid.cell_size, grid.cell_size])
+    state.walls.each_key do | wall |
+      return true if inputs.mouse.point.inside_rect?(scale_up(wall))
     end
+
     false
   end
 
   # Returns whether the mouse is inside of a grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid?
-    inputs.mouse.point.x >= 0 &&
-      inputs.mouse.point.y >= 0 &&
-      inputs.mouse.point.x < grid.width * grid.cell_size &&
-      inputs.mouse.point.y < grid.height * grid.cell_size
+    inputs.mouse.point.inside_rect?(scale_up([0, 0, grid.width, grid.height]))
   end
 
   # These methods provide handy aliases to colors

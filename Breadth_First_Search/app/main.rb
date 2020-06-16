@@ -269,7 +269,27 @@ class BreadthFirstSearch
   end
 
   # This method processes user input every tick
-  # Allows the user to interact with the breadth first search
+  # This method allows the user to use the buttons, slider, and edit the grid
+  # There are 2 types of input:
+  #   Button Input
+  #   Click and Drag Input
+  #
+  #   Button Input is used for the backward step and forward step buttons
+  #   Input is detected by mouse up within the bounds of the rect
+  #
+  #   Click and Drag Input is used for moving the star, adding walls,
+  #   removing walls, and the slider
+  #
+  #   When the mouse is down on the star, the click_and_drag variable is set to :star
+  #   While click_and_drag equals :star, the cursor's position is used to calculate the
+  #   appropriate drag behavior
+  #
+  #   When the mouse goes up click_and_drag is set to :none
+  #
+  #   A variable has to be used because the star has to continue being edited even
+  #   when the cursor is no longer over the star
+  #
+  #   Similar things occur for the other Click and Drag inputs
   def input
     # Checks whether any of the buttons are being clicked
     input_buttons
