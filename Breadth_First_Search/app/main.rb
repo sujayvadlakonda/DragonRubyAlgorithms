@@ -402,8 +402,10 @@ class BreadthFirstSearch
   # Adds walls at cells under the cursor
   def input_add_wall
     if mouse_inside_grid? 
-      state.walls[cell_closest_to_mouse] = true 
-      recalculate 
+      unless state.walls.has_key?(cell_closest_to_mouse)
+        state.walls[cell_closest_to_mouse] = true 
+        recalculate 
+      end
     end
   end
 

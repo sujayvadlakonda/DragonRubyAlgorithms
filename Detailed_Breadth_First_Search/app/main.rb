@@ -447,11 +447,13 @@ class DetailedBreadthFirstSearch
 
   # Adds walls at cells under the cursor
   def input_add_wall
+    # Adds a wall to the hash
+    # We can use the grid closest to mouse, because the cursor is inside the grid
     if mouse_inside_grid? 
-      # Adds a wall to the hash
-      # We can use the grid closest to mouse, because the cursor is inside the grid
-      state.walls[cell_closest_to_mouse] = true 
-      recalculate 
+      unless state.walls.has_key?(cell_closest_to_mouse)
+        state.walls[cell_closest_to_mouse] = true 
+        recalculate 
+      end
     end
   end
 
