@@ -61,7 +61,7 @@ class EarlyExitBreadthFirstSearch
     # We store this value, because we want to remember the value even when
     # the user's cursor is no longer over what they're interacting with, but
     # they are still clicking down on the mouse.
-    args.state.click_and_drag = :none 
+    args.state.current_input = :none 
   end
 
   # This method is called every frame/tick
@@ -239,11 +239,11 @@ class EarlyExitBreadthFirstSearch
   #   Click and Drag Input is used for moving the star, adding walls,
   #   removing walls, and the slider
   #
-  #   When the mouse is down on the star, the click_and_drag variable is set to :star
-  #   While click_and_drag equals :star, the cursor's position is used to calculate the
+  #   When the mouse is down on the star, the current_input variable is set to :star
+  #   While current_input equals :star, the cursor's position is used to calculate the
   #   appropriate drag behavior
   #
-  #   When the mouse goes up click_and_drag is set to :none
+  #   When the mouse goes up current_input is set to :none
   #
   #   A variable has to be used because the star has to continue being edited even
   #   when the cursor is no longer over the star
@@ -253,58 +253,96 @@ class EarlyExitBreadthFirstSearch
     # The detection and processing of click and drag inputs are separate
     # The program has to remember that the user is dragging an object
     # even when the mouse is no longer over that object
-    detect_click_and_drag          
-    process_click_and_drag         
+    detect_current_input          
+    process_current_input         
   end
   # Determines what the user is editing and stores the value
   # Storing the value allows the user to continue the same edit as long as the
   # mouse left click is held
-  def detect_click_and_drag
+  def detect_current_input
     if inputs.mouse.up                  
-      state.click_and_drag = :none          
+      state.current_input = :none          
     elsif star_clicked?                 
-      state.click_and_drag = :star          
+      state.current_input = :star          
+    elsif star2_clicked?                 
+      state.current_input = :star2          
     elsif target_clicked?                 
-      state.click_and_drag = :target          
+      state.current_input = :target          
+    elsif target2_clicked?                 
+      state.current_input = :target2 
     elsif wall_clicked?                 
-      state.click_and_drag = :remove_wall   
+      state.current_input = :remove_wall   
+    elsif wall2_clicked?                 
+      state.current_input = :remove_wall2
     elsif grid_clicked?                 
-      state.click_and_drag = :add_wall      
+      state.current_input = :add_wall
+    elsif grid2_clicked?                 
+      state.current_input = :add_wall2
     end
   end
 
   # Processes click and drag based on what the user is currently dragging
-  def process_click_and_drag
-    if state.click_and_drag == :star         
+  def process_current_input
+    if state.current_input == :star         
       input_star                            
-    elsif state.click_and_drag == :target         
+    elsif state.current_input == :star2
+      input_star2                            
+    elsif state.current_input == :target         
       input_target                            
-    elsif state.click_and_drag == :remove_wall  
+    elsif state.current_input == :target2         
+      input_target2                            
+    elsif state.current_input == :remove_wall  
       input_remove_wall                     
-    elsif state.click_and_drag == :add_wall     
+    elsif state.current_input == :remove_wall2
+      input_remove_wall2                     
+    elsif state.current_input == :add_wall     
       input_add_wall                        
+    elsif state.current_input == :add_wall2     
+      input_add_wall2                        
     end
   end
 
   # Moves the star to the grid closest to the mouse
-  # Only recalculates the search if the star changes position
+  # Only resets the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star
     old_star = state.star.clone 
     state.star = cell_closest_to_mouse
     unless old_star == state.star 
-      recalculate 
+      reset 
+    end
+  end
+
+  # Moves the star to the grid closest to the mouse
+  # Only resets the search if the star changes position
+  # Called whenever the user is editing the star (puts mouse down on star)
+  def input_star2
+    old_star = state.star.clone 
+    state.star = cell_closest_to_mouse2
+    unless old_star == state.star 
+      reset 
     end
   end
 
   # Moves the target to the grid closest to the mouse
-  # Only recalculates the search if the target changes position
+  # Only resets the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target
     old_target = state.target.clone 
     state.target = cell_closest_to_mouse
     unless old_target == state.target 
-      recalculate 
+      reset 
+    end
+  end
+
+  # Moves the target to the grid closest to the mouse
+  # Only resets the search if the target changes position
+  # Called whenever the user is editing the target (puts mouse down on target)
+  def input_target2
+    old_target = state.target.clone 
+    state.target = cell_closest_to_mouse2
+    unless old_target == state.target 
+      reset 
     end
   end
 
@@ -316,7 +354,20 @@ class EarlyExitBreadthFirstSearch
     if mouse_inside_grid? 
       if state.walls.has_key?(cell_closest_to_mouse)
         state.walls.delete(cell_closest_to_mouse) 
-        recalculate 
+        reset 
+      end
+    end
+  end
+
+  # Removes walls that are under the cursor
+  def input_remove_wall2
+    # The mouse needs to be inside the grid, because we only want to remove walls
+    # the cursor is directly over
+    # Recalculations should only occur when a wall is actually deleted
+    if mouse_inside_grid2? 
+      if state.walls.has_key?(cell_closest_to_mouse2)
+        state.walls.delete(cell_closest_to_mouse2) 
+        reset 
       end
     end
   end
@@ -326,15 +377,25 @@ class EarlyExitBreadthFirstSearch
     if mouse_inside_grid? 
       unless state.walls.has_key?(cell_closest_to_mouse)
         state.walls[cell_closest_to_mouse] = true 
-        recalculate 
+        reset 
+      end
+    end
+  end
+
+  # Adds walls at cells under the cursor
+  def input_add_wall2
+    if mouse_inside_grid2? 
+      unless state.walls.has_key?(cell_closest_to_mouse2)
+        state.walls[cell_closest_to_mouse2] = true 
+        reset 
       end
     end
   end
 
   # Whenever the user edits the grid,
-  # The search has to be recalculated upto the current step
+  # The search has to be resetd upto the current step
   # with the current grid as the initial state of the grid
-  def recalculate
+  def reset
     # Resets the search
     state.frontier  = [] 
     state.visited   = {} 
@@ -345,11 +406,11 @@ class EarlyExitBreadthFirstSearch
 
   # This method moves the search forward one step
   # When the animation is playing it is called every tick
-  # And called whenever the current step of the animation needs to be recalculated
+  # And called whenever the current step of the animation needs to be resetd
 
   # Moves the search forward one step
   # Parameter called_from_tick is true if it is called from the tick method
-  # It is false when the search is being recalculated after user editing the grid
+  # It is false when the search is being resetd after user editing the grid
   def calc
     # The setup to the search
     # Runs once when the there are no visited cells
@@ -405,9 +466,30 @@ class EarlyExitBreadthFirstSearch
     [x, y] 
   end
 
+  # When the user grabs the star and puts their cursor to the far right
+  # and moves up and down, the star is supposed to move along the grid as well
+  # Finding the cell closest to the mouse helps with this
+  def cell_closest_to_mouse2
+    # Closest cell to the mouse
+    x = (inputs.mouse.point.x / grid.cell_size).to_i 
+    y = (inputs.mouse.point.y / grid.cell_size).to_i 
+    # Translate the cell to the original grid
+    x -= grid.width + 1
+    # Bound x and y to the grid
+    x = grid.width - 1 if x > grid.width - 1 
+    y = grid.height - 1 if y > grid.height - 1 
+    # Return closest cell
+    [x, y] 
+  end
+
   # Signal that the user is going to be moving the star
   def star_clicked?
     inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.star))
+  end
+
+  # Signal that the user is going to be moving the star
+  def star2_clicked?
+    inputs.mouse.down && inputs.mouse.point.inside_rect?(early_exit_scale_up(state.star))
   end
 
   # Signal that the user is going to be moving the target
@@ -415,9 +497,19 @@ class EarlyExitBreadthFirstSearch
     inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.target))
   end
 
+  # Signal that the user is going to be moving the target
+  def target2_clicked?
+    inputs.mouse.down && inputs.mouse.point.inside_rect?(early_exit_scale_up(state.target))
+  end
+
   # Signal that the user is going to be removing walls
   def wall_clicked?
-    inputs.mouse.down && mouse_inside_a_wall?
+    inputs.mouse.down && mouse_inside_wall?
+  end
+
+  # Signal that the user is going to be removing walls
+  def wall2_clicked?
+    inputs.mouse.down && mouse_inside_wall2?
   end
 
   # Signal that the user is going to be adding walls
@@ -425,9 +517,14 @@ class EarlyExitBreadthFirstSearch
     inputs.mouse.down && mouse_inside_grid?
   end
 
+  # Signal that the user is going to be adding walls
+  def grid2_clicked?
+    inputs.mouse.down && mouse_inside_grid2?
+  end
+
   # Returns whether the mouse is inside of a wall
   # Part of the condition that checks whether the user is removing a wall
-  def mouse_inside_a_wall?
+  def mouse_inside_wall?
     state.walls.each_key do | wall |
       return true if inputs.mouse.point.inside_rect?(scale_up(wall))
     end
@@ -435,12 +532,26 @@ class EarlyExitBreadthFirstSearch
     false
   end
 
+  # Returns whether the mouse is inside of a wall
+  # Part of the condition that checks whether the user is removing a wall
+  def mouse_inside_wall2?
+    state.walls.each_key do | wall |
+      return true if inputs.mouse.point.inside_rect?(early_exit_scale_up(wall))
+    end
+
+    false
+  end
   # Returns whether the mouse is inside of a grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid?
     inputs.mouse.point.inside_rect?(scale_up([0, 0, grid.width, grid.height]))
   end
 
+  # Returns whether the mouse is inside of a grid
+  # Part of the condition that checks whether the user is adding a wall
+  def mouse_inside_grid2?
+    inputs.mouse.point.inside_rect?(early_exit_scale_up([0, 0, grid.width, grid.height]))
+  end
 
   # These methods provide handy aliases to colors
 
