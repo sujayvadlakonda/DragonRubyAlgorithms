@@ -11,4 +11,9 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 4. Change code to see the updates reflected live.
 
 
+# Breadth First Search
 ![](gifs/Breadth_First_Search.gif)
+
+
+# Detailed Breadth First Search
+![](gifs/Detailed_Breadth_First_Search.gif)
