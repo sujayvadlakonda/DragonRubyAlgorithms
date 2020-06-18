@@ -456,13 +456,25 @@ class EarlyExitBreadthFirstSearch
   def adjacent_neighbors(x, y)
     neighbors = [] 
 
-    # Clockwise pattern from left neighbor, gives a zigzag path
-    neighbors << [x + 1, y] unless x == grid.width - 1 
     neighbors << [x, y - 1] unless y == 0 
     neighbors << [x - 1, y] unless x == 0 
     neighbors << [x, y + 1] unless y == grid.height - 1 
+    neighbors << [x + 1, y] unless x == grid.width - 1 
+
+    neighbors = neighbors.sort_by { |neighbor_x, neighbor_y|  proximity_to_star(neighbor_x, neighbor_y) }
 
     neighbors 
+  end
+
+  def proximity_to_star(x, y)
+    distance_x = (state.star.x - x).abs
+    distance_y = (state.star.y - y).abs
+
+    if distance_x > distance_y
+      return distance_x
+    else
+      return distance_y
+    end
   end
 
   # When the user grabs the star and puts their cursor to the far right
