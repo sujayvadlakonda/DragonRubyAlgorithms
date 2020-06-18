@@ -50,10 +50,11 @@ class EarlyExitBreadthFirstSearch
     # Storing cells that the search has visited, prevents unnecessary steps
     # Expanding the frontier of the search in order makes the search expand
     # from the center outward
-    args.state.visited    = {}
-    args.state.frontier   = []
-    args.state.came_from  = {}
-    args.state.path       = {}
+    args.state.visited               = {}
+    args.state.early_exit_visited    = {}
+    args.state.frontier              = []
+    args.state.came_from             = {}
+    args.state.path                  = {}
 
     # What the user is currently editing on the grid
     # Possible values are: :none, :slider, :star, :remove_wall, :add_wall
@@ -192,6 +193,13 @@ class EarlyExitBreadthFirstSearch
       max_distance = grid.width + grid.height
       alpha = 255.to_i * distance.to_i / max_distance.to_i
       outputs.solids << [scale_up(visited_cell), red, alpha]
+      # outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+    end
+
+    state.early_exit_visited.each_key do | visited_cell |
+      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+      max_distance = grid.width + grid.height
+      alpha = 255.to_i * distance.to_i / max_distance.to_i
       outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
     end
   end
@@ -399,6 +407,7 @@ class EarlyExitBreadthFirstSearch
     # Resets the search
     state.frontier  = [] 
     state.visited   = {} 
+    state.early_exit_visited   = {} 
     state.came_from = {} 
     state.path      = {}
   end
@@ -416,6 +425,7 @@ class EarlyExitBreadthFirstSearch
     # Runs once when the there are no visited cells
     if state.visited.empty?  
       state.visited[state.star] = true              
+      state.early_exit_visited[state.star] = true              
       state.frontier << state.star                   
       state.came_from[state.star] = nil
     end
@@ -430,6 +440,9 @@ class EarlyExitBreadthFirstSearch
         unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited
           state.visited[neighbor] = true 
+          unless state.visited.has_key?(state.target)
+            state.early_exit_visited[neighbor] = true
+          end
           state.frontier << neighbor 
           state.came_from[neighbor] = new_frontier
         end
