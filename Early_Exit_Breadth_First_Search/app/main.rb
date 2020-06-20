@@ -92,6 +92,7 @@ class EarlyExitBreadthFirstSearch
     render_path
     render_star
     render_target
+    render_labels
   end
 
   # The methods below subdivide the task of drawing everything to the screen
@@ -170,10 +171,17 @@ class EarlyExitBreadthFirstSearch
     outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
   end 
 
+  def render_labels
+    outputs.labels << [200, 625, "Without early exit"]
+    outputs.labels << [875, 625, "With early exit"]
+  end
+
   def render_path
-    state.path.each_key do | cell |
-      outputs.solids << [scale_up(cell), path_color]
-      outputs.solids << [early_exit_scale_up(cell), path_color]
+    unless state.path.size == 1
+      state.path.each_key do | cell |
+        outputs.solids << [scale_up(cell), path_color]
+        outputs.solids << [early_exit_scale_up(cell), path_color]
+      end
     end
   end
 
