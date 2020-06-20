@@ -572,7 +572,7 @@ class DetailedBreadthFirstSearch
     [221, 212, 213] 
   end
 
-  # White
+  # Black
   def grid_line_color
     [255, 255, 255] 
   end

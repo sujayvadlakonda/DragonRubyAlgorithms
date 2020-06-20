@@ -26,43 +26,6 @@ class EarlyExitBreadthFirstSearch
   attr_gtk
 
   def initialize(args)
-    # Variables to edit the size and appearance of the grid
-    # Freely customizable to user's liking
-    args.state.grid.width     = 15
-    args.state.grid.height    = 15
-    args.state.grid.cell_size = 40
-
-    # At some step the animation will end,
-    # and further steps won't change anything (the whole grid will be explored)
-    # This step is roughly the grid's width * height
-    # When anim_steps equals max_steps no more calculations will occur
-    # and the slider will be at the end
-    args.state.max_steps  = args.state.grid.width * args.state.grid.height 
-
-    # The location of the star and walls of the grid
-    # They can be modified to have a different initial grid
-    # Walls are stored in a hash for quick look up when doing the search
-    args.state.star   = [0, 0]
-    args.state.target = [0, 2]
-    args.state.walls  = {}    
-
-    # Variables that are used by the breadth first search
-    # Storing cells that the search has visited, prevents unnecessary steps
-    # Expanding the frontier of the search in order makes the search expand
-    # from the center outward
-    args.state.visited               = {}
-    args.state.early_exit_visited    = {}
-    args.state.frontier              = []
-    args.state.came_from             = {}
-    args.state.path                  = {}
-
-    # What the user is currently editing on the grid
-    # Possible values are: :none, :slider, :star, :remove_wall, :add_wall
-
-    # We store this value, because we want to remember the value even when
-    # the user's cursor is no longer over what they're interacting with, but
-    # they are still clicking down on the mouse.
-    args.state.current_input = :none 
   end
 
   # This method is called every frame/tick
@@ -70,12 +33,55 @@ class EarlyExitBreadthFirstSearch
   # User input is processed, and
   # The next step in the search is calculated
   def tick
+    defaults
     if state.visited.empty?
       state.max_steps.times { calc }
       calc_path
     end
     render 
     input  
+  end
+
+  def defaults
+    # Variables to edit the size and appearance of the grid
+    # Freely customizable to user's liking
+    grid.width     ||= 15
+    grid.height    ||= 15
+    grid.cell_size ||= 40
+    grid.rect      ||= [0, 0, grid.width, grid.height]
+
+
+    # At some step the animation will end,
+    # and further steps won't change anything (the whole grid.widthill be explored)
+    # This step is roughly the grid's width * height
+    # When anim_steps equals max_steps no more calculations will occur
+    # and the slider will be at the end
+    state.max_steps  ||= args.state.grid.width * args.state.grid.height 
+
+    # The location of the star and walls of the grid
+    # They can be modified to have a different initial grid
+    # Walls are stored in a hash for quick look up when doing the search
+    state.star   ||= [0, 0]
+    state.target ||= [0, 2]
+    state.walls  ||= {}    
+
+    # Variables that are used by the breadth first search
+    # Storing cells that the search has visited, prevents unnecessary steps
+    # Expanding the frontier of the search in order makes the search expand
+    # from the center outward
+    state.visited               ||= {}
+    state.early_exit_visited    ||= {}
+    state.frontier              ||= []
+    state.came_from             ||= {}
+    state.path                  ||= {}
+
+    # What the user is currently editing on the grid
+    # Possible values are: :none, :slider, :star, :remove_wall, :add_wall
+
+    # We store this value, because we want to remember the value even when
+    # the user's cursor is no longer over what they're interacting with, but
+    # they are still clicking down on the mouse.
+    state.current_input ||= :none 
   end
 
   # Draws everything onto the screen
@@ -149,13 +155,6 @@ class EarlyExitBreadthFirstSearch
     state.walls.each_key do |wall| 
       outputs.solids << [scale_up(wall), wall_color]
       outputs.solids << [early_exit_scale_up(wall), wall_color]
-    end
-  end
-
-  # Renders cells that have been searched in the appropriate color
-  def render_visited
-    state.visited.each_key do |cell| 
-      outputs.solids << [scale_up(cell), visited_color]
     end
   end
 
@@ -311,46 +310,46 @@ class EarlyExitBreadthFirstSearch
   end
 
   # Moves the star to the grid closest to the mouse
-  # Only resets the search if the star changes position
+  # Only reset_searchs the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star
     old_star = state.star.clone 
     state.star = cell_closest_to_mouse
     unless old_star == state.star 
-      reset 
+      reset_search 
     end
   end
 
   # Moves the star to the grid closest to the mouse
-  # Only resets the search if the star changes position
+  # Only reset_searchs the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star2
     old_star = state.star.clone 
     state.star = cell_closest_to_mouse2
     unless old_star == state.star 
-      reset 
+      reset_search 
     end
   end
 
   # Moves the target to the grid closest to the mouse
-  # Only resets the search if the target changes position
+  # Only reset_searchs the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target
     old_target = state.target.clone 
     state.target = cell_closest_to_mouse
     unless old_target == state.target 
-      reset 
+      reset_search 
     end
   end
 
   # Moves the target to the grid closest to the mouse
-  # Only resets the search if the target changes position
+  # Only reset_searchs the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target2
     old_target = state.target.clone 
     state.target = cell_closest_to_mouse2
     unless old_target == state.target 
-      reset 
+      reset_search 
     end
   end
 
@@ -362,7 +361,7 @@ class EarlyExitBreadthFirstSearch
     if mouse_inside_grid? 
       if state.walls.has_key?(cell_closest_to_mouse)
         state.walls.delete(cell_closest_to_mouse) 
-        reset 
+        reset_search 
       end
     end
   end
@@ -375,7 +374,7 @@ class EarlyExitBreadthFirstSearch
     if mouse_inside_grid2? 
       if state.walls.has_key?(cell_closest_to_mouse2)
         state.walls.delete(cell_closest_to_mouse2) 
-        reset 
+        reset_search 
       end
     end
   end
@@ -385,7 +384,7 @@ class EarlyExitBreadthFirstSearch
     if mouse_inside_grid? 
       unless state.walls.has_key?(cell_closest_to_mouse)
         state.walls[cell_closest_to_mouse] = true 
-        reset 
+        reset_search 
       end
     end
   end
@@ -395,16 +394,16 @@ class EarlyExitBreadthFirstSearch
     if mouse_inside_grid2? 
       unless state.walls.has_key?(cell_closest_to_mouse2)
         state.walls[cell_closest_to_mouse2] = true 
-        reset 
+        reset_search 
       end
     end
   end
 
   # Whenever the user edits the grid,
-  # The search has to be resetd upto the current step
+  # The search has to be reset_searchd upto the current step
   # with the current grid as the initial state of the grid
-  def reset
-    # Resets the search
+  def reset_search
+    # Reset_Searchs the search
     state.frontier  = [] 
     state.visited   = {} 
     state.early_exit_visited   = {} 
@@ -415,11 +414,11 @@ class EarlyExitBreadthFirstSearch
 
   # This method moves the search forward one step
   # When the animation is playing it is called every tick
-  # And called whenever the current step of the animation needs to be resetd
+  # And called whenever the current step of the animation needs to be reset_searchd
 
   # Moves the search forward one step
   # Parameter called_from_tick is true if it is called from the tick method
-  # It is false when the search is being resetd after user editing the grid
+  # It is false when the search is being reset_searchd after user editing the grid
   def calc
     # The setup to the search
     # Runs once when the there are no visited cells
@@ -569,13 +568,13 @@ class EarlyExitBreadthFirstSearch
   # Returns whether the mouse is inside of a grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid?
-    inputs.mouse.point.inside_rect?(scale_up([0, 0, grid.width, grid.height]))
+    inputs.mouse.point.inside_rect?(scale_up(grid.rect))
   end
 
   # Returns whether the mouse is inside of a grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid2?
-    inputs.mouse.point.inside_rect?(early_exit_scale_up([0, 0, grid.width, grid.height]))
+    inputs.mouse.point.inside_rect?(early_exit_scale_up(grid.rect))
   end
 
   # These methods provide handy aliases to colors
@@ -585,34 +584,9 @@ class EarlyExitBreadthFirstSearch
     [221, 212, 213] 
   end
 
-  # White
-  def grid_line_color
-    [255, 255, 255] 
-  end
-
-  # Dark Brown
-  def visited_color
-    [204, 191, 179] 
-  end
-
-  # Blue
-  def frontier_color
-    [103, 136, 204] 
-  end
-
   # Camo Green
   def wall_color
     [134, 134, 120] 
-  end
-
-  # Button Background
-  def gray
-    [190, 190, 190]
-  end
-
-  # Button Outline
-  def black
-    [0, 0, 0]
   end
 
   # Pastel White
@@ -621,20 +595,12 @@ class EarlyExitBreadthFirstSearch
   end
 
   def red
-    [255, 0 , 0]
+    [255, 0, 0]
   end
 
-  # These methods make the code more concise
+  # Makes code more concise
   def grid
     state.grid
-  end
-
-  def buttons
-    state.buttons
-  end
-
-  def slider
-    state.slider
   end
 end
 
