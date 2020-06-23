@@ -1,32 +1,17 @@
-# A visual demonstration of a breadth first search
+# Comparison of a breadth first search with and without early exit
 # Inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
-# An animation that can respond to user input in real time
+# Demonstrates the exploration difference caused by early exit
+# Also demonstrates how breadth first search is used for path generation
 
-# A breadth first search expands in all directions one step at a time
-# The frontier is a queue of cells to be expanded from
-# The visited hash allows quick lookups of cells that have been expanded from
-# The walls hash allows quick lookup of whether a cell is a wall
-
-# The breadth first search starts by adding the red star to the frontier array
-# and marking it as visited
-# Each step a cell is removed from the front of the frontier array (queue)
-# Unless the neighbor is a wall or visited, it is added to the frontier array
-# The neighbor is then marked as visited
-
-# The frontier is blue
-# Visited cells are light brown
-# Walls are camo green
-# Even when walls are visited, they will maintain their wall color
-
-# The star can be moved by clicking and dragging
-# Walls can be added and removed by clicking and dragging
-
+# The left grid is a breadth first search without early exit
+# The right grid is a breadth first search with early exit
+# The red squares represent how far the search expanded
+# The darker the red, the farther the search proceeded
+# Comparison of the heat map reveals how much searching can be saved by early exit
+# The white path shows path generation via breadth first search
 class EarlyExitBreadthFirstSearch
   attr_gtk
-
-  def initialize(args)
-  end
 
   # This method is called every frame/tick
   # Every tick, the current state of the search is rendered on the screen,
@@ -34,8 +19,11 @@ class EarlyExitBreadthFirstSearch
   # The next step in the search is calculated
   def tick
     defaults
+    # If the grid has not been searched
     if state.visited.empty?
-      state.max_steps.times { calc }
+      # Complete the search
+      state.max_steps.times { step }
+      # And calculate the path
       calc_path
     end
     render 
@@ -49,7 +37,6 @@ class EarlyExitBreadthFirstSearch
     grid.height    ||= 15
     grid.cell_size ||= 40
     grid.rect      ||= [0, 0, grid.width, grid.height]
-
 
     # At some step the animation will end,
     # and further steps won't change anything (the whole grid.widthill be explored)
@@ -69,15 +56,20 @@ class EarlyExitBreadthFirstSearch
     # Storing cells that the search has visited, prevents unnecessary steps
     # Expanding the frontier of the search in order makes the search expand
     # from the center outward
+
+    # Visited cells in the first grid
     state.visited               ||= {}
+    # Visited cells in the second grid
     state.early_exit_visited    ||= {}
+    # The cells from which the search is to expand
     state.frontier              ||= []
+    # A hash of where each cell was expanded from
+    # The key is a cell, and the value is the cell it came from
     state.came_from             ||= {}
+    # Cells that are part of the path from the target to the star
     state.path                  ||= {}
 
     # What the user is currently editing on the grid
-    # Possible values are: :none, :slider, :star, :remove_wall, :add_wall
-
     # We store this value, because we want to remember the value even when
     # the user's cursor is no longer over what they're interacting with, but
     # they are still clicking down on the mouse.
@@ -103,11 +95,10 @@ class EarlyExitBreadthFirstSearch
     render_grid_lines 
   end
 
-  # Draws a rectangle the size of the entire grid to represent unvisited cells
+  # Draws both grids
   def render_unvisited
-    rect = [0, 0, grid.width, grid.height]
-    outputs.solids << [scale_up(rect), unvisited_color]
-    outputs.solids << [early_exit_scale_up(rect), unvisited_color]
+    outputs.solids << [scale_up(grid.rect), unvisited_color]
+    outputs.solids << [early_exit_scale_up(grid.rect), unvisited_color]
   end
 
   # Draws grid lines to show the division of the grid into cells
@@ -143,15 +134,7 @@ class EarlyExitBreadthFirstSearch
     scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
   end
 
-  # Draws the area that is going to be searched from
-  # The frontier is the most outward parts of the search
-  def render_frontier
-    state.frontier.each do |cell| 
-      outputs.solids << [scale_up(cell), frontier_color]
-    end
-  end
-
-  # Draws the walls
+  # Draws the walls on both grids
   def render_walls
     state.walls.each_key do |wall| 
       outputs.solids << [scale_up(wall), wall_color]
@@ -159,32 +142,40 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Renders the star
+  # Renders the star on both grids
   def render_star
     outputs.sprites << [scale_up(state.star), 'star.png']
     outputs.sprites << [early_exit_scale_up(state.star), 'star.png']
   end 
 
-  # Renders the target
+  # Renders the target on both grids
   def render_target
     outputs.sprites << [scale_up(state.target), 'target.png']
     outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
   end 
 
+  # Labels the grids
   def render_labels
     outputs.labels << [200, 625, "Without early exit"]
     outputs.labels << [875, 625, "With early exit"]
   end
 
+  # Renders the path based off of the state.path hash
   def render_path
+    # If the star and target are disconnected there will only be one path
+    # The path should not render in that case
     unless state.path.size == 1
       state.path.each_key do | cell |
+        # Renders path on both grids
         outputs.solids << [scale_up(cell), path_color]
         outputs.solids << [early_exit_scale_up(cell), path_color]
       end
     end
   end
 
+  # Calculates the path from the target to the star after the search is over
+  # Relies on the came_from hash
+  # Fills the state.path hash, which is later rendered on screen
   def calc_path
     endpoint = state.target
     while endpoint
@@ -194,6 +185,8 @@ class EarlyExitBreadthFirstSearch
   end
 
   # Representation of how far away visited cells are from the star
+  # Replaces the render_visited method
+  # Visually demonstrates the effectiveness of early exit for pathfinding
   def render_heat_map
     state.visited.each_key do | visited_cell |
       distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
@@ -212,7 +205,9 @@ class EarlyExitBreadthFirstSearch
   end
 
   # Translates the given cell grid.width + 1 to the right and then scales up
-  # Works on rects but NOT on lines
+  # Used to draw cells for the second grid
+  # This method does not work for lines,
+  # so separate methods exist for the grid lines
   def early_exit_scale_up(cell)
     cell_clone = cell.clone
     cell_clone.x += grid.width + 1
@@ -243,61 +238,52 @@ class EarlyExitBreadthFirstSearch
   end
 
   # This method processes user input every tick
-  # This method allows the user to use the buttons, slider, and edit the grid
-  # There are 2 types of input:
-  #   Button Input
-  #   Click and Drag Input
-  #
-  #   Button Input is used for the backward step and forward step buttons
-  #   Input is detected by mouse up within the bounds of the rect
-  #
-  #   Click and Drag Input is used for moving the star, adding walls,
-  #   removing walls, and the slider
-  #
-  #   When the mouse is down on the star, the current_input variable is set to :star
-  #   While current_input equals :star, the cursor's position is used to calculate the
-  #   appropriate drag behavior
-  #
-  #   When the mouse goes up current_input is set to :none
-  #
-  #   A variable has to be used because the star has to continue being edited even
-  #   when the cursor is no longer over the star
-  #
-  #   Similar things occur for the other Click and Drag inputs
+  # Any method with "1" is related to the first grid
+  # Any method with "2" is related to the second grid
   def input
-    # The detection and processing of click and drag inputs are separate
     # The program has to remember that the user is dragging an object
     # even when the mouse is no longer over that object
-    detect_current_input          
-    process_current_input         
+    # So detecting input and processing input is separate
+    detect_input          
+    process_input         
   end
+
   # Determines what the user is editing and stores the value
   # Storing the value allows the user to continue the same edit as long as the
   # mouse left click is held
-  def detect_current_input
+  def detect_input
+    # When the mouse is up, nothing is being edited
     if inputs.mouse.up                  
       state.current_input = :none          
+    # When the star in the no second grid is clicked
     elsif star_clicked?                 
       state.current_input = :star          
+    # When the star in the second grid is clicked
     elsif star2_clicked?                 
       state.current_input = :star2          
+    # When the target in the no second grid is clicked
     elsif target_clicked?                 
       state.current_input = :target          
+    # When the target in the second grid is clicked
     elsif target2_clicked?                 
       state.current_input = :target2 
+    # When a wall in the first grid is clicked
     elsif wall_clicked?                 
       state.current_input = :remove_wall   
+    # When a wall in the second grid is clicked
     elsif wall2_clicked?                 
       state.current_input = :remove_wall2
+    # When the first grid is clicked
     elsif grid_clicked?                 
       state.current_input = :add_wall
+    # When the second grid is clicked
     elsif grid2_clicked?                 
       state.current_input = :add_wall2
     end
   end
 
   # Processes click and drag based on what the user is currently dragging
-  def process_current_input
+  def process_input
     if state.current_input == :star         
       input_star                            
     elsif state.current_input == :star2
@@ -317,8 +303,8 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Moves the star to the grid closest to the mouse
-  # Only reset_searchs the search if the star changes position
+  # Moves the star to the cell closest to the mouse in the first grid
+  # Only resets the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star
     old_star = state.star.clone 
@@ -328,8 +314,8 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Moves the star to the grid closest to the mouse
-  # Only reset_searchs the search if the star changes position
+  # Moves the star to the cell closest to the mouse in the second grid
+  # Only resets the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star2
     old_star = state.star.clone 
@@ -339,7 +325,7 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Moves the target to the grid closest to the mouse
+  # Moves the target to the grid closest to the mouse in the first grid
   # Only reset_searchs the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target
@@ -350,7 +336,7 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Moves the target to the grid closest to the mouse
+  # Moves the target to the cell closest to the mouse in the second grid
   # Only reset_searchs the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target2
@@ -361,7 +347,7 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Removes walls that are under the cursor
+  # Removes walls in the first grid that are under the cursor
   def input_remove_wall
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
@@ -374,7 +360,7 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Removes walls that are under the cursor
+  # Removes walls in the second grid that are under the cursor
   def input_remove_wall2
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
@@ -387,7 +373,7 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Adds walls at cells under the cursor
+  # Adds a wall in the first grid in the cell the mouse is over
   def input_add_wall
     if mouse_inside_grid? 
       unless state.walls.has_key?(cell_closest_to_mouse)
@@ -397,7 +383,8 @@ class EarlyExitBreadthFirstSearch
     end
   end
 
-  # Adds walls at cells under the cursor
+  
+  # Adds a wall in the second grid in the cell the mouse is over
   def input_add_wall2
     if mouse_inside_grid2? 
       unless state.walls.has_key?(cell_closest_to_mouse2)
@@ -419,17 +406,10 @@ class EarlyExitBreadthFirstSearch
     state.path      = {}
   end
 
-
-  # This method moves the search forward one step
-  # When the animation is playing it is called every tick
-  # And called whenever the current step of the animation needs to be reset_searchd
-
   # Moves the search forward one step
-  # Parameter called_from_tick is true if it is called from the tick method
-  # It is false when the search is being reset_searchd after user editing the grid
-  def calc
+  def step
     # The setup to the search
-    # Runs once when the there are no visited cells
+    # Runs once when there are no visited cells
     if state.visited.empty?  
       state.visited[state.star] = true              
       state.early_exit_visited[state.star] = true              
@@ -445,11 +425,15 @@ class EarlyExitBreadthFirstSearch
       adjacent_neighbors(*new_frontier).each do |neighbor| 
         # That have not been visited and are not walls
         unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
-          # Add them to the frontier and mark them as visited
+          # Add them to the frontier and mark them as visited in the first grid
           state.visited[neighbor] = true 
+          # Unless the target has been visited
           unless state.visited.has_key?(state.target)
+            # Mark the neighbor as visited in the second grid as well
             state.early_exit_visited[neighbor] = true
           end
+
+          # Add the neighbor to the frontier and remember which cell it came from
           state.frontier << neighbor 
           state.came_from[neighbor] = new_frontier
         end
@@ -463,16 +447,27 @@ class EarlyExitBreadthFirstSearch
   def adjacent_neighbors(x, y)
     neighbors = [] 
 
+    # Gets all the valid neighbors into the array
+    # From southern neighbor, clockwise
     neighbors << [x, y - 1] unless y == 0 
     neighbors << [x - 1, y] unless x == 0 
     neighbors << [x, y + 1] unless y == grid.height - 1 
     neighbors << [x + 1, y] unless x == grid.width - 1 
 
+    # Sorts the neighbors so the rendered path is a zigzag path
+    # Cells in a diagonal direction are given priority
+    # Comment this line to see the difference
     neighbors = neighbors.sort_by { |neighbor_x, neighbor_y|  proximity_to_star(neighbor_x, neighbor_y) }
 
     neighbors 
   end
 
+  # Finds the vertical and horizontal distance of a cell from the star
+  # and returns the larger value
+  # This method is used to have a zigzag pattern in the rendered path
+  # A cell that is [5, 5] from the star,
+  # is explored before over a cell that is [0, 7] away.
+  # So, if possible, the search tries to go diagonal (zigzag) first
   def proximity_to_star(x, y)
     distance_x = (state.star.x - x).abs
     distance_y = (state.star.y - y).abs
@@ -488,7 +483,7 @@ class EarlyExitBreadthFirstSearch
   # and moves up and down, the star is supposed to move along the grid as well
   # Finding the cell closest to the mouse helps with this
   def cell_closest_to_mouse
-    # Closest cell to the mouse
+    # Closest cell to the mouse in the first grid
     x = (inputs.mouse.point.x / grid.cell_size).to_i 
     y = (inputs.mouse.point.y / grid.cell_size).to_i 
     # Bound x and y to the grid
@@ -500,61 +495,61 @@ class EarlyExitBreadthFirstSearch
 
   # When the user grabs the star and puts their cursor to the far right
   # and moves up and down, the star is supposed to move along the grid as well
-  # Finding the cell closest to the mouse helps with this
+  # Finding the cell closest to the mouse in the second grid helps with this
   def cell_closest_to_mouse2
-    # Closest cell to the mouse
+    # Closest cell grid to the mouse in the second
     x = (inputs.mouse.point.x / grid.cell_size).to_i 
     y = (inputs.mouse.point.y / grid.cell_size).to_i 
-    # Translate the cell to the original grid
+    # Translate the cell to the first grid
     x -= grid.width + 1
-    # Bound x and y to the grid
+    # Bound x and y to the first grid
     x = grid.width - 1 if x > grid.width - 1 
     y = grid.height - 1 if y > grid.height - 1 
     # Return closest cell
     [x, y] 
   end
 
-  # Signal that the user is going to be moving the star
+  # Signal that the user is going to be moving the star from the first grid
   def star_clicked?
     inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.star))
   end
 
-  # Signal that the user is going to be moving the star
+  # Signal that the user is going to be moving the star from the second grid
   def star2_clicked?
     inputs.mouse.down && inputs.mouse.point.inside_rect?(early_exit_scale_up(state.star))
   end
 
-  # Signal that the user is going to be moving the target
+  # Signal that the user is going to be moving the target from the first grid
   def target_clicked?
     inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.target))
   end
 
-  # Signal that the user is going to be moving the target
+  # Signal that the user is going to be moving the target from the second grid
   def target2_clicked?
     inputs.mouse.down && inputs.mouse.point.inside_rect?(early_exit_scale_up(state.target))
   end
 
-  # Signal that the user is going to be removing walls
+  # Signal that the user is going to be removing walls from the first grid
   def wall_clicked?
     inputs.mouse.down && mouse_inside_wall?
   end
 
-  # Signal that the user is going to be removing walls
+  # Signal that the user is going to be removing walls from the second grid
   def wall2_clicked?
     inputs.mouse.down && mouse_inside_wall2?
   end
 
-  # Signal that the user is going to be adding walls
+  # Signal that the user is going to be adding walls from the first grid
   def grid_clicked?
     inputs.mouse.down && mouse_inside_grid?
   end
 
-  # Signal that the user is going to be adding walls
+  # Signal that the user is going to be adding walls from the second grid
   def grid2_clicked?
     inputs.mouse.down && mouse_inside_grid2?
   end
 
-  # Returns whether the mouse is inside of a wall
+  # Returns whether the mouse is inside of a wall in the first grid
   # Part of the condition that checks whether the user is removing a wall
   def mouse_inside_wall?
     state.walls.each_key do | wall |
@@ -564,7 +559,7 @@ class EarlyExitBreadthFirstSearch
     false
   end
 
-  # Returns whether the mouse is inside of a wall
+  # Returns whether the mouse is inside of a wall in the second grid
   # Part of the condition that checks whether the user is removing a wall
   def mouse_inside_wall2?
     state.walls.each_key do | wall |
@@ -573,13 +568,14 @@ class EarlyExitBreadthFirstSearch
 
     false
   end
-  # Returns whether the mouse is inside of a grid
+
+  # Returns whether the mouse is inside of the first grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid?
     inputs.mouse.point.inside_rect?(scale_up(grid.rect))
   end
 
-  # Returns whether the mouse is inside of a grid
+  # Returns whether the mouse is inside of the second grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid2?
     inputs.mouse.point.inside_rect?(early_exit_scale_up(grid.rect))
