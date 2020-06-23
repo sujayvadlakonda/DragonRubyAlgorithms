@@ -10,6 +10,7 @@
 # The darker the red, the farther the search proceeded
 # Comparison of the heat map reveals how much searching can be saved by early exit
 # The white path shows path generation via breadth first search
+
 class EarlyExitBreadthFirstSearch
   attr_gtk
 

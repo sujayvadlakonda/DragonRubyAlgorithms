@@ -17,3 +17,7 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 # Detailed Breadth First Search
 ![](gifs/Detailed_Breadth_First_Search.gif)
+
+
+# Early Exit Breadth First Search
+![](gifs/Early_Exit_Breadth_First_Search.gif)
