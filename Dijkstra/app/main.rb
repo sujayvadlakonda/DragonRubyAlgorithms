@@ -11,7 +11,7 @@
 # Comparison of the heat map reveals how much searching can be saved by early exit
 # The white path shows path generation via breadth first search
 
-class EarlyExitBreadthFirstSearch
+class Dijkstra
   attr_gtk
 
   # This method is called every frame/tick
@@ -621,12 +621,12 @@ def tick args
   end
 
   # Every tick, new args are passed, and the Breadth First Search tick is called
-  $early_exit_breadth_first_search ||= EarlyExitBreadthFirstSearch.new(args)
-  $early_exit_breadth_first_search.args = args
-  $early_exit_breadth_first_search.tick
+  $dijkstra ||= Dijkstra.new(args)
+  $dijkstra.args = args
+  $dijkstra.tick
 end
 
 
 def reset
-  $early_exit_breadth_first_search = nil
+  $dijkstra = nil
 end
