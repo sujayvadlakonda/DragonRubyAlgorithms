@@ -34,9 +34,9 @@ class Dijkstra
   def defaults
     # Variables to edit the size and appearance of the grid
     # Freely customizable to user's liking
-    grid.width     ||= 15
-    grid.height    ||= 15
-    grid.cell_size ||= 40
+    grid.width     ||= 10
+    grid.height    ||= 10
+    grid.cell_size ||= 60
     grid.rect      ||= [0, 0, grid.width, grid.height]
 
     # At some step the animation will end,
@@ -157,8 +157,8 @@ class Dijkstra
 
   # Labels the grids
   def render_labels
-    outputs.labels << [200, 625, "Number of steps"]
-    outputs.labels << [875, 625, "Distance"]
+    outputs.labels << [175, 650, "Number of steps", 3]
+    outputs.labels << [925, 650, "Distance", 3]
   end
 
   # Renders the path based off of the state.path hash
