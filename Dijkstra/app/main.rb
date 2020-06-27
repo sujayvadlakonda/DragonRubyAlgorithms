@@ -157,8 +157,8 @@ class Dijkstra
 
   # Labels the grids
   def render_labels
-    outputs.labels << [200, 625, "Without early exit"]
-    outputs.labels << [875, 625, "With early exit"]
+    outputs.labels << [200, 625, "Number of steps"]
+    outputs.labels << [875, 625, "Distance"]
   end
 
   # Renders the path based off of the state.path hash
