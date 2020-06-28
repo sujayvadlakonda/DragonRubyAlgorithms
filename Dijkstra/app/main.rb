@@ -70,6 +70,8 @@ class Dijkstra
     # Cells that are part of the path from the target to the star
     state.path                  ||= {}
 
+    state.hills ||= {}
+
     # What the user is currently editing on the grid
     # We store this value, because we want to remember the value even when
     # the user's cursor is no longer over what they're interacting with, but
@@ -81,6 +83,7 @@ class Dijkstra
   def render
     render_background       
     render_heat_map
+    render_hills
     render_walls
     render_path
     render_star
@@ -133,6 +136,13 @@ class Dijkstra
   # Easy way to draw horizontal lines given an index
   def early_exit_horizontal_line row
     scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
+  end
+
+  def render_hills
+    state.hills.each_key do |hill| 
+      outputs.solids << [scale_up(hill), hill_color]
+      outputs.solids << [early_exit_scale_up(hill), hill_color]
+    end
   end
 
   # Draws the walls on both grids
@@ -274,12 +284,17 @@ class Dijkstra
     # When a wall in the second grid is clicked
     elsif wall2_clicked?                 
       state.current_input = :remove_wall2
+    elsif hill_clicked?                 
+      state.current_input = :add_wall   
+    # When a wall in the second grid is clicked
+    elsif hill2_clicked?                 
+      state.current_input = :add_wall2
     # When the first grid is clicked
     elsif grid_clicked?                 
-      state.current_input = :add_wall
+      state.current_input = :add_hill
     # When the second grid is clicked
     elsif grid2_clicked?                 
-      state.current_input = :add_wall2
+      state.current_input = :add_hill2
     end
   end
 
@@ -297,6 +312,10 @@ class Dijkstra
       input_remove_wall                     
     elsif state.current_input == :remove_wall2
       input_remove_wall2                     
+    elsif state.current_input == :add_hill     
+      input_add_hill                        
+    elsif state.current_input == :add_hill2     
+      input_add_hill2                        
     elsif state.current_input == :add_wall     
       input_add_wall                        
     elsif state.current_input == :add_wall2     
@@ -374,10 +393,32 @@ class Dijkstra
     end
   end
 
+  # Adds a hill in the first grid in the cell the mouse is over
+  def input_add_hill
+    if mouse_inside_grid? 
+      unless state.hills.has_key?(cell_closest_to_mouse)
+        state.hills[cell_closest_to_mouse] = true 
+        reset_search 
+      end
+    end
+  end
+
+  
+  # Adds a hill in the second grid in the cell the mouse is over
+  def input_add_hill2
+    if mouse_inside_grid2? 
+      unless state.hills.has_key?(cell_closest_to_mouse2)
+        state.hills[cell_closest_to_mouse2] = true 
+        reset_search 
+      end
+    end
+  end
+
   # Adds a wall in the first grid in the cell the mouse is over
   def input_add_wall
     if mouse_inside_grid? 
-      unless state.walls.has_key?(cell_closest_to_mouse)
+      if state.hills.has_key?(cell_closest_to_mouse)
+        state.hills.delete(cell_closest_to_mouse) 
         state.walls[cell_closest_to_mouse] = true 
         reset_search 
       end
@@ -388,7 +429,8 @@ class Dijkstra
   # Adds a wall in the second grid in the cell the mouse is over
   def input_add_wall2
     if mouse_inside_grid2? 
-      unless state.walls.has_key?(cell_closest_to_mouse2)
+      if state.hills.has_key?(cell_closest_to_mouse2)
+        state.hills.delete(cell_closest_to_mouse2) 
         state.walls[cell_closest_to_mouse2] = true 
         reset_search 
       end
@@ -540,6 +582,16 @@ class Dijkstra
     inputs.mouse.down && mouse_inside_wall2?
   end
 
+  # Signal that the user is going to be removing hills from the first grid
+  def hill_clicked?
+    inputs.mouse.down && mouse_inside_hill?
+  end
+
+  # Signal that the user is going to be removing hills from the second grid
+  def hill2_clicked?
+    inputs.mouse.down && mouse_inside_hill2?
+  end
+
   # Signal that the user is going to be adding walls from the first grid
   def grid_clicked?
     inputs.mouse.down && mouse_inside_grid?
@@ -570,6 +622,23 @@ class Dijkstra
     false
   end
 
+  def mouse_inside_hill?
+    state.hills.each_key do | hill |
+      return true if inputs.mouse.point.inside_rect?(scale_up(hill))
+    end
+
+    false
+  end
+
+  # Returns whether the mouse is inside of a hill in the second grid
+  # Part of the condition that checks whether the user is removing a hill
+  def mouse_inside_hill2?
+    state.hills.each_key do | hill |
+      return true if inputs.mouse.point.inside_rect?(early_exit_scale_up(hill))
+    end
+
+    false
+  end
   # Returns whether the mouse is inside of the first grid
   # Part of the condition that checks whether the user is adding a wall
   def mouse_inside_grid?
@@ -601,6 +670,10 @@ class Dijkstra
 
   def red
     [255, 0, 0]
+  end
+
+  def hill_color
+    [139, 173, 132]
   end
 
   # Makes code more concise
