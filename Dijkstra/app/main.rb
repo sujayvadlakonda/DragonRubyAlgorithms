@@ -23,6 +23,7 @@ class Dijkstra
     # If the grid has not been searched
     if breadth_first_search.visited.empty?
       calc_breadth_first
+      calc_dijkstra
       # calc_path
     end
     render 
@@ -62,9 +63,9 @@ class Dijkstra
     breadth_first_search.frontier   = []
     breadth_first_search.came_from  = {}
 
-    dijkstra.frontier    = []
-    dijkstra.came_from   = {}
-    dijkstra.cost_so_far = {}
+    dijkstra_search.frontier    = []
+    dijkstra_search.came_from   = {}
+    dijkstra_search.cost_so_far = {}
   end
 
   def breadth_first_started?
@@ -101,25 +102,28 @@ class Dijkstra
   end
 
   def calc_dijkstra
-    dijkstra.frontier                << [state.star, 0]
-    dijkstra.came_from[state.star]   = nil
-    dijkstra.cost_so_far[state.star] = 0
+    dijkstra_search.frontier                << [state.star, 0]
+    dijkstra_search.came_from[state.star]   = nil
+    dijkstra_search.cost_so_far[state.star] = 0
 
-    until dijkstra.frontier.empty?
-      current = dijkstra.frontier.shift
+    until dijkstra_search.frontier.empty?
+      current = dijkstra_search.frontier.shift[0]
 
       return if current == state.target
 
       adjacent_neighbors(*current).each do | neighbor |
-        new_cost = dijkstra.cost_so_far(current) + cost(neighbor)
-        if not dijkstra.cost_so_far.has_key?(neighbor) or new_cost < dijkstra.cost_so_far[neighbor]
-          dijkstra.cost_so_far[neighbor] = new_cost
-          dijkstra.frontier << [neighbor, new_cost]
-          dijkstra.came_from[neighbor] << current
+        unless state.walls.has_key?(neighbor)
+          new_cost = dijkstra_search.cost_so_far[current] + cost(neighbor)
+          if not dijkstra_search.cost_so_far.has_key?(neighbor) || new_cost < dijkstra_search.cost_so_far[neighbor]
+            dijkstra_search.cost_so_far[neighbor] = new_cost
+            dijkstra_search.frontier << [neighbor, new_cost]
+            dijkstra_search.came_from[neighbor] = current
+          end
         end
       end
 
-      dijkstra.frontier.sort_by {|cell, priority| priority}
+      dijkstra_search.frontier.sort_by {|cell, priority| priority}
+      # return
     end
   end
 
@@ -162,13 +166,36 @@ class Dijkstra
   # Draws everything onto the screen
   def render
     render_background       
-    render_heat_map
-    render_hills
-    render_walls
-    render_path
     render_star
     render_target
-    render_labels
+    # render_labels
+
+    render_breadth_first_search
+    render_dijkstra
+    render_walls
+    render_hills
+  end
+
+  def render_breadth_first_search
+    render_breadth_first_search_heat_map
+    render_breadth_first_search_path
+  end
+
+  def render_dijkstra
+    render_dijkstra_path
+  end
+
+  def render_dijkstra_path
+    # If the search found the target
+    if dijkstra_search.came_from.has_key?(state.target)
+      # Starting from the target
+      endpoint = state.target
+      while endpoint
+        # Draw a path until the star is reached
+        outputs.solids << [early_exit_scale_up(endpoint), path_color]
+        endpoint = dijkstra_search.came_from[endpoint]
+      end
+    end
   end
 
   # The methods below subdivide the task of drawing everything to the screen
@@ -182,19 +209,19 @@ class Dijkstra
   # Draws both grids
   def render_unvisited
     outputs.solids << [scale_up(grid.rect), unvisited_color]
-    # outputs.solids << [early_exit_scale_up(grid.rect), unvisited_color]
+    outputs.solids << [early_exit_scale_up(grid.rect), unvisited_color]
   end
 
   # Draws grid lines to show the division of the grid into cells
   def render_grid_lines
     for x in 0..grid.width
       outputs.lines << vertical_line(x)
-      # outputs.lines << early_exit_vertical_line(x)
+      outputs.lines << early_exit_vertical_line(x)
     end
 
     for y in 0..grid.height
       outputs.lines << horizontal_line(y) 
-      # outputs.lines << early_exit_horizontal_line(y)
+      outputs.lines << early_exit_horizontal_line(y)
     end
   end
 
@@ -236,23 +263,23 @@ class Dijkstra
   # Renders the star on both grids
   def render_star
     outputs.sprites << [scale_up(state.star), 'star.png']
-    # outputs.sprites << [early_exit_scale_up(state.star), 'star.png']
+    outputs.sprites << [early_exit_scale_up(state.star), 'star.png']
   end 
 
   # Renders the target on both grids
   def render_target
     outputs.sprites << [scale_up(state.target), 'target.png']
-    # outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
+    outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
   end 
 
   # Labels the grids
   def render_labels
     outputs.labels << [175, 650, "Number of steps", 3]
-    # outputs.labels << [925, 650, "Distance", 3]
+    outputs.labels << [925, 650, "Distance", 3]
   end
 
   # # Renders the path based off of the state.path hash
-  # def render_path
+  # def render_breadth_first_search_path
   #   # If the star and target are disconnected there will only be one path
   #   # The path should not render in that case
   #   unless state.path.size == 1
@@ -264,7 +291,7 @@ class Dijkstra
   #   end
   # end
 
-  def render_path
+  def render_breadth_first_search_path
     # If the search found the target
     if breadth_first_search.visited.has_key?(state.target)
       # Start from the target
@@ -292,7 +319,7 @@ class Dijkstra
   # Representation of how far away visited cells are from the star
   # Replaces the render_visited method
   # Visually demonstrates the effectiveness of early exit for pathfinding
-  def render_heat_map
+  def render_breadth_first_search_heat_map
     breadth_first_search.visited.each_key do | visited_cell |
       distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
       max_distance = grid.width + grid.height
@@ -422,7 +449,9 @@ class Dijkstra
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star
     old_star = state.star.clone 
-    state.star = cell_closest_to_mouse
+    unless cell_closest_to_mouse == state.target
+      state.star = cell_closest_to_mouse 
+    end
     unless old_star == state.star 
       reset_search 
     end
@@ -433,7 +462,9 @@ class Dijkstra
   # Called whenever the user is editing the star (puts mouse down on star)
   def input_star2
     old_star = state.star.clone 
-    state.star = cell_closest_to_mouse2
+    unless cell_closest_to_mouse2 == state.target
+      state.star = cell_closest_to_mouse2
+    end
     unless old_star == state.star 
       reset_search 
     end
@@ -444,7 +475,9 @@ class Dijkstra
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target
     old_target = state.target.clone 
-    state.target = cell_closest_to_mouse
+    unless cell_closest_to_mouse == state.star
+      state.target = cell_closest_to_mouse
+    end
     unless old_target == state.target 
       reset_search 
     end
@@ -455,7 +488,9 @@ class Dijkstra
   # Called whenever the user is editing the target (puts mouse down on target)
   def input_target2
     old_target = state.target.clone 
-    state.target = cell_closest_to_mouse2
+    unless cell_closest_to_mouse2 == state.star
+      state.target = cell_closest_to_mouse2
+    end
     unless old_target == state.target 
       reset_search 
     end
@@ -542,50 +577,50 @@ class Dijkstra
     # state.path      = {}
   end
 
-  # Moves the breadth first search forward one step
-  def breadth_first_step
-    # The setup to the search
-    # Runs once when there are no visited cells
-    unless search_started?
-      state.visited[state.star] = true              
-      state.frontier << state.star                   
-      state.came_from[state.star]   = nil
-    end
+  # # Moves the breadth first search forward one step
+  # def breadth_first_step
+  #   # The setup to the search
+  #   # Runs once when there are no visited cells
+  #   unless search_started?
+  #     state.visited[state.star] = true              
+  #     state.frontier << state.star                   
+  #     state.came_from[state.star]   = nil
+  #   end
 
-    # A step in the search
-    unless state.frontier.empty? 
-      # Takes the next frontier cell
-      new_frontier = state.frontier.shift 
-      # For each of its neighbors
-      adjacent_neighbors(*new_frontier).each do |neighbor| 
-        # That have not been visited and are not walls
-        unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
-          # Add them to the frontier and mark them as visited in the first grid
-          state.visited[neighbor] = true 
-          # Unless the target has been visited
-          unless state.visited.has_key?(state.target)
-            # Mark the neighbor as visited in the second grid as well
-            state.dijkstra_visited[neighbor] = true
-          end
+  #   # A step in the search
+  #   unless state.frontier.empty? 
+  #     # Takes the next frontier cell
+  #     new_frontier = state.frontier.shift 
+  #     # For each of its neighbors
+  #     adjacent_neighbors(*new_frontier).each do |neighbor| 
+  #       # That have not been visited and are not walls
+  #       unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
+  #         # Add them to the frontier and mark them as visited in the first grid
+  #         state.visited[neighbor] = true 
+  #         # Unless the target has been visited
+  #         unless state.visited.has_key?(state.target)
+  #           # Mark the neighbor as visited in the second grid as well
+  #           state.dijkstra_visited[neighbor] = true
+  #         end
 
-          # Add the neighbor to the frontier and remember which cell it came from
-          state.frontier << neighbor 
-          state.came_from[neighbor] = new_frontier
-        end
-      end
-    end
-  end
+  #         # Add the neighbor to the frontier and remember which cell it came from
+  #         state.frontier << neighbor 
+  #         state.came_from[neighbor] = new_frontier
+  #       end
+  #     end
+  #   end
+  # end
 
-  def dijkstra_step
-    unless dijkstra_started?
-      state.dijkstra_visited[state.star]   = true              
-      state.dijkstra_frontier              << state.star                   
-      state.dijkstra_came_from[state.star] = nil
-      state.cost_so_far[state.star]        = 0
-    end
+  # def dijkstra_step
+  #   unless dijkstra_started?
+  #     state.dijkstra_visited[state.star]   = true              
+  #     state.dijkstra_frontier              << state.star                   
+  #     state.dijkstra_came_from[state.star] = nil
+  #     state.cost_so_far[state.star]        = 0
+  #   end
 
 
-  end
+  # end
 
 
 
@@ -650,6 +685,8 @@ class Dijkstra
     # Translate the cell to the first grid
     x -= grid.width + 1
     # Bound x and y to the first grid
+    x = 0 if x < 0
+    y = 0 if y < 0
     x = grid.width - 1 if x > grid.width - 1 
     y = grid.height - 1 if y > grid.height - 1 
     # Return closest cell
@@ -789,8 +826,8 @@ class Dijkstra
     state.breadth_first_search
   end
 
-  def dijkstra
-    state.dijkstra
+  def dijkstra_search
+    state.dijkstra_search
   end
 end
 
