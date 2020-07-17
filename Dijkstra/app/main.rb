@@ -22,7 +22,6 @@ class Dijkstra
     defaults
     # If the grid has not been searched
     if breadth_first_search.visited.empty?
-      puts breadth_first_search.visited
       calc_breadth_first
       calc_dijkstra
       # calc_path
@@ -574,8 +573,9 @@ class Dijkstra
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
     if mouse_inside_grid? 
-      if state.walls.has_key?(cell_closest_to_mouse)
+      if state.walls.has_key?(cell_closest_to_mouse) or state.hills.has_key?(cell_closest_to_mouse)
         state.walls.delete(cell_closest_to_mouse) 
+        state.hills.delete(cell_closest_to_mouse) 
         reset_search 
       end
     end
@@ -587,8 +587,9 @@ class Dijkstra
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
     if mouse_inside_grid2? 
-      if state.walls.has_key?(cell_closest_to_mouse2)
+      if state.walls.has_key?(cell_closest_to_mouse2) or state.hills.has_key?(cell_closest_to_mouse2)
         state.walls.delete(cell_closest_to_mouse2) 
+        state.hills.delete(cell_closest_to_mouse2) 
         reset_search 
       end
     end
@@ -618,7 +619,7 @@ class Dijkstra
   # Adds a wall in the first grid in the cell the mouse is over
   def input_add_wall
     if mouse_inside_grid? 
-      if state.hills.has_key?(cell_closest_to_mouse)
+      unless state.walls.has_key?(cell_closest_to_mouse)
         state.hills.delete(cell_closest_to_mouse) 
         state.walls[cell_closest_to_mouse] = true 
         reset_search 
@@ -629,7 +630,7 @@ class Dijkstra
   # Adds a wall in the second grid in the cell the mouse is over
   def input_add_wall2
     if mouse_inside_grid2? 
-      if state.hills.has_key?(cell_closest_to_mouse2)
+      unless state.walls.has_key?(cell_closest_to_mouse)
         state.hills.delete(cell_closest_to_mouse2) 
         state.walls[cell_closest_to_mouse2] = true 
         reset_search 
