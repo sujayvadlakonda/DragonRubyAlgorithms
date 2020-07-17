@@ -185,44 +185,6 @@ class Dijkstra
     render_dijkstra_path
   end
 
-  def render_dijkstra_path
-    # If the search found the target
-    if dijkstra_search.came_from.has_key?(state.target)
-      # Get the target and the cell it came from
-      endpoint = state.target
-      next_endpoint = dijkstra_search.came_from[endpoint]
-      while endpoint and next_endpoint
-        # Draw a path between them
-        render_path_between(endpoint, next_endpoint)
-
-        # Shift one cell down the path
-        endpoint = next_endpoint
-        next_endpoint = dijkstra_search.came_from[endpoint]
-
-        # Repeat till the end of the path
-      end
-    end
-  end
-
-  def render_path_between(cell_one, cell_two)
-    if cell_one.x == cell_two.x
-      if cell_one.y < cell_two.y
-        path = [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
-        outputs.solids << [early_exit_scale_up(path), path_color]
-      else
-        path = [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
-        outputs.solids << [early_exit_scale_up(path), path_color]
-      end
-    else
-      if cell_one.x < cell_two.x
-        path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
-        outputs.solids << [early_exit_scale_up(path), path_color]
-      else
-        path = [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
-        outputs.solids << [early_exit_scale_up(path), path_color]
-      end
-    end
-  end
 
   def render_up_path(x, y)
     [x + 0.333, y + 0.5, 0.333, 0.5]
@@ -330,20 +292,57 @@ class Dijkstra
   #   end
   # end
 
+  def render_dijkstra_path
+    # If the search found the target
+    if dijkstra_search.came_from.has_key?(state.target)
+      # Get the target and the cell it came from
+      endpoint = state.target
+      next_endpoint = dijkstra_search.came_from[endpoint]
+      while endpoint and next_endpoint
+        # Draw a path between them
+        path = get_path_between(endpoint, next_endpoint)
+        outputs.solids << [early_exit_scale_up(path), path_color]
+
+        # Shift one cell down the path
+        endpoint = next_endpoint
+        next_endpoint = dijkstra_search.came_from[endpoint]
+
+        # Repeat till the end of the path
+      end
+    end
+  end
+
   def render_breadth_first_search_path
     # If the search found the target
     if breadth_first_search.visited.has_key?(state.target)
       # Start from the target
       endpoint = state.target
-      while endpoint
-        # Render it as a path
-        outputs.solids << [scale_up(endpoint), path_color]
-        # And recursively navigate back to the starting point of the search
-        endpoint = breadth_first_search.came_from[endpoint]
+      next_endpoint = breadth_first_search.came_from[endpoint]
+      while endpoint and next_endpoint
+        path = get_path_between(endpoint, next_endpoint)
+        outputs.solids << [scale_up(path), path_color]
+        endpoint = next_endpoint
+        next_endpoint = breadth_first_search.came_from[endpoint]
       end
     end
   end
 
+  def get_path_between(cell_one, cell_two)
+    if cell_one.x == cell_two.x
+      if cell_one.y < cell_two.y
+        return [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
+      else
+        return [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
+      end
+    else
+      if cell_one.x < cell_two.x
+        return [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
+      else
+        return [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
+      end
+    end
+    nil
+  end
   # Calculates the path from the target to the star after the search is over
   # Relies on the came_from hash
   # Fills the state.path hash, which is later rendered on screen
