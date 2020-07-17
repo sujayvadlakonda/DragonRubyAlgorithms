@@ -181,7 +181,7 @@ class Dijkstra
   end
 
   def render_dijkstra
-    # render_dijkstra_heat_map
+    render_dijkstra_heat_map
     render_dijkstra_path
   end
 
@@ -205,19 +205,13 @@ class Dijkstra
     # end
   end
 
-  # Dijkstra is inefficient bc no visited !!!!!!!!!!!!!
-  # def render_dijkstra_heat_map
-  #   dijkstra.came_from.each_key do |visited_cell|
-
-  #   end
-  #   breadth_first_search.visited.each_key do | visited_cell |
-  #     distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
-  #     max_distance = grid.width + grid.height
-  #     alpha = 255.to_i * distance.to_i / max_distance.to_i
-  #     outputs.solids << [scale_up(visited_cell), red, alpha]
-  #     # outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
-  #   end
-  # end
+  def render_dijkstra_heat_map
+    dijkstra_search.cost_so_far.each do |visited_cell, cost|
+      max_cost = (grid.width + grid.height) #* 5
+      alpha = 255.to_i * cost.to_i / max_cost.to_i
+      outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+    end
+  end
 
   def render_up_path(x, y)
     [x + 0.333, y + 0.5, 0.333, 0.5]
