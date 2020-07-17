@@ -122,8 +122,8 @@ class Dijkstra
         end
       end
 
-      dijkstra_search.frontier.sort_by {|cell, priority| priority}
-      # return
+      # My implementation of a priority queue
+      dijkstra_search.frontier = dijkstra_search.frontier.sort_by {|cell, priority| priority}
     end
   end
 
@@ -168,7 +168,7 @@ class Dijkstra
     render_background       
     render_star
     render_target
-    # render_labels
+    render_labels
 
     render_breadth_first_search
     render_dijkstra
@@ -188,14 +188,53 @@ class Dijkstra
   def render_dijkstra_path
     # If the search found the target
     if dijkstra_search.came_from.has_key?(state.target)
-      # Starting from the target
+      # Get the target and the cell it came from
       endpoint = state.target
-      while endpoint
-        # Draw a path until the star is reached
-        outputs.solids << [early_exit_scale_up(endpoint), path_color]
-        endpoint = dijkstra_search.came_from[endpoint]
+      next_endpoint = dijkstra_search.came_from[endpoint]
+      while endpoint and next_endpoint
+        # Draw a path between them
+        render_path_between(endpoint, next_endpoint)
+
+        # Shift one cell down the path
+        endpoint = next_endpoint
+        next_endpoint = dijkstra_search.came_from[endpoint]
+
+        # Repeat till the end of the path
       end
     end
+  end
+
+  def render_path_between(cell_one, cell_two)
+    if cell_one.x == cell_two.x
+      if cell_one.y < cell_two.y
+        path = [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
+        outputs.solids << [early_exit_scale_up(path), path_color]
+      else
+        path = [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
+        outputs.solids << [early_exit_scale_up(path), path_color]
+      end
+    else
+      if cell_one.x < cell_two.x
+        path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
+        outputs.solids << [early_exit_scale_up(path), path_color]
+      else
+        path = [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
+        outputs.solids << [early_exit_scale_up(path), path_color]
+      end
+    end
+  end
+
+  def render_up_path(x, y)
+    [x + 0.333, y + 0.5, 0.333, 0.5]
+  end
+  def render_down_path(x, y)
+    [x + 0.333, y + 0.0, 0.333, 0.5]
+  end
+  def render_left_path(x, y)
+    [x + 0.5, y + 0.333, 0.5, 0.333]
+  end
+  def render_right_path(x, y)
+    [x + 0.0, y + 0.333, 0.5, 0.333]
   end
 
   # The methods below subdivide the task of drawing everything to the screen
