@@ -22,6 +22,7 @@ class Dijkstra
     defaults
     # If the grid has not been searched
     if breadth_first_search.visited.empty?
+      puts breadth_first_search.visited
       calc_breadth_first
       calc_dijkstra
       # calc_path
@@ -59,13 +60,13 @@ class Dijkstra
     # they are still clicking down on the mouse.
     state.current_input ||= :none 
 
-    breadth_first_search.visited    = {}
-    breadth_first_search.frontier   = []
-    breadth_first_search.came_from  = {}
+    breadth_first_search.visited    ||= {}
+    breadth_first_search.frontier   ||= []
+    breadth_first_search.came_from  ||= {}
 
-    dijkstra_search.frontier    = []
-    dijkstra_search.came_from   = {}
-    dijkstra_search.cost_so_far = {}
+    dijkstra_search.frontier    ||= []
+    dijkstra_search.came_from   ||= {}
+    dijkstra_search.cost_so_far ||= {}
   end
 
   def breadth_first_started?
@@ -112,17 +113,16 @@ class Dijkstra
       return if current == state.target
 
       adjacent_neighbors(*current).each do | neighbor |
-        unless state.walls.has_key?(neighbor)
+        unless dijkstra_search.came_from.has_key?(neighbor) or state.walls.has_key?(neighbor)
           new_cost = dijkstra_search.cost_so_far[current] + cost(neighbor)
-          if not dijkstra_search.cost_so_far.has_key?(neighbor) || new_cost < dijkstra_search.cost_so_far[neighbor]
-            dijkstra_search.cost_so_far[neighbor] = new_cost
-            dijkstra_search.frontier << [neighbor, new_cost]
-            dijkstra_search.came_from[neighbor] = current
-          end
+          # if not dijkstra_search.cost_so_far.has_key?(neighbor) || new_cost < dijkstra_search.cost_so_far[neighbor]
+          dijkstra_search.cost_so_far[neighbor] = new_cost
+          dijkstra_search.frontier << [neighbor, new_cost]
+          dijkstra_search.came_from[neighbor] = current
+          # end
         end
       end
-
-      # My implementation of a priority queue
+      # My implementation of a priority queue lol
       dijkstra_search.frontier = dijkstra_search.frontier.sort_by {|cell, priority| priority}
     end
   end
@@ -172,8 +172,8 @@ class Dijkstra
 
     render_breadth_first_search
     render_dijkstra
-    render_walls
     render_hills
+    render_walls
   end
 
   def render_breadth_first_search
@@ -182,9 +182,43 @@ class Dijkstra
   end
 
   def render_dijkstra
+    # render_dijkstra_heat_map
     render_dijkstra_path
   end
 
+  # Representation of how far away visited cells are from the star
+  # Replaces the render_visited method
+  # Visually demonstrates the effectiveness of early exit for pathfinding
+  def render_breadth_first_search_heat_map
+    breadth_first_search.visited.each_key do | visited_cell |
+      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+      max_distance = grid.width + grid.height
+      alpha = 255.to_i * distance.to_i / max_distance.to_i
+      outputs.solids << [scale_up(visited_cell), red, alpha]
+      # outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+    end
+
+    # state.dijkstra_visited.each_key do | visited_cell |
+    #   distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+    #   max_distance = grid.width + grid.height
+    #   alpha = 255.to_i * distance.to_i / max_distance.to_i
+    #   outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+    # end
+  end
+
+  # Dijkstra is inefficient bc no visited !!!!!!!!!!!!!
+  # def render_dijkstra_heat_map
+  #   dijkstra.came_from.each_key do |visited_cell|
+
+  #   end
+  #   breadth_first_search.visited.each_key do | visited_cell |
+  #     distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+  #     max_distance = grid.width + grid.height
+  #     alpha = 255.to_i * distance.to_i / max_distance.to_i
+  #     outputs.solids << [scale_up(visited_cell), red, alpha]
+  #     # outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+  #   end
+  # end
 
   def render_up_path(x, y)
     [x + 0.333, y + 0.5, 0.333, 0.5]
@@ -613,6 +647,13 @@ class Dijkstra
     # # state.dijkstra_visited   = {} 
     # breadth_first_search.came_from = {} 
     # state.path      = {}
+    breadth_first_search.visited    = {}
+    breadth_first_search.frontier   = []
+    breadth_first_search.came_from  = {}
+
+    dijkstra_search.frontier    = []
+    dijkstra_search.came_from   = {}
+    dijkstra_search.cost_so_far = {}
   end
 
   # # Moves the breadth first search forward one step
