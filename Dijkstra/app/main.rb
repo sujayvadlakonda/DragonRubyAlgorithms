@@ -72,9 +72,9 @@ class Dijkstra
     breadth_first_search.visited[state.star]   = true              
     breadth_first_search.frontier              << state.star                   
     breadth_first_search.came_from[state.star] = nil
-    
-    state.max_steps.times do
-      return if breadth_first_search.frontier.empty? or breadth_first_search.visited.has_key?(state.target)
+
+    until breadth_first_search.frontier.empty?
+      return if breadth_first_search.visited.has_key?(state.target)
       # A step in the search
       # Takes the next frontier cell
       new_frontier = breadth_first_search.frontier.shift 
