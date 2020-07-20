@@ -1,4 +1,5 @@
 # Comparison of a breadth first search with and without early exit
+
 # Inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 # Demonstrates the exploration difference caused by early exit
@@ -20,13 +21,9 @@ class Dijkstra
   # The next step in the search is calculated
   def tick
     defaults
-    # If the grid has not been searched
-    if breadth_first_search.visited.empty?
-      calc_breadth_first
-      calc_dijkstra
-    end
     render 
     input  
+    calc
   end
 
   def defaults
@@ -36,13 +33,6 @@ class Dijkstra
     grid.height    ||= 10
     grid.cell_size ||= 60
     grid.rect      ||= [0, 0, grid.width, grid.height]
-
-    # At some step the animation will end,
-    # and further steps won't change anything (the whole grid.widthill be explored)
-    # This step is roughly the grid's width * height
-    # When anim_steps equals max_steps no more calculations will occur
-    # and the slider will be at the end
-    state.max_steps  ||= state.grid.width * state.grid.height 
 
     # The location of the star and walls of the grid
     # They can be modified to have a different initial grid
@@ -66,6 +56,316 @@ class Dijkstra
     dijkstra_search.came_from   ||= {}
     dijkstra_search.cost_so_far ||= {}
   end
+
+  # Draws everything onto the screen
+  def render
+    render_background       
+
+    render_breadth_first_search
+    render_dijkstra
+
+    render_star
+    render_target
+    render_hills
+    render_walls
+  end
+  # The methods below subdivide the task of drawing everything to the screen
+
+  # Draws what the grid looks like with nothing on it
+  def render_background
+    render_unvisited  
+    render_grid_lines 
+    render_labels
+  end
+
+  # Draws both grids
+  def render_unvisited
+    outputs.solids << [scale_up(grid.rect), unvisited_color]
+    outputs.solids << [early_exit_scale_up(grid.rect), unvisited_color]
+  end
+
+  # Draws grid lines to show the division of the grid into cells
+  def render_grid_lines
+    for x in 0..grid.width
+      outputs.lines << vertical_line(x)
+      outputs.lines << early_exit_vertical_line(x)
+    end
+
+    for y in 0..grid.height
+      outputs.lines << horizontal_line(y) 
+      outputs.lines << early_exit_horizontal_line(y)
+    end
+  end
+
+  # Easy way to draw vertical lines given an index
+  def vertical_line column
+    scale_up([column, 0, column, grid.height])
+  end
+
+  # Easy way to draw horizontal lines given an index
+  def horizontal_line row
+    scale_up([0, row, grid.width, row])
+  end
+
+  # Easy way to draw vertical lines given an index
+  def early_exit_vertical_line column
+    scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
+  end
+
+  # Easy way to draw horizontal lines given an index
+  def early_exit_horizontal_line row
+    scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
+  end
+
+  # Labels the grids
+  def render_labels
+    outputs.labels << [175, 650, "Number of steps", 3]
+    outputs.labels << [925, 650, "Distance", 3]
+  end
+
+  def render_breadth_first_search
+    render_breadth_first_search_heat_map
+    render_breadth_first_search_path
+  end
+  # Representation of how far away visited cells are from the star
+  # Replaces the render_visited method
+  # Visually demonstrates the effectiveness of early exit for pathfinding
+  def render_breadth_first_search_heat_map
+    breadth_first_search.visited.each_key do | visited_cell |
+      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+      max_distance = grid.width + grid.height
+      alpha = 255.to_i * distance.to_i / max_distance.to_i
+      outputs.solids << [scale_up(visited_cell), red, alpha]
+    end
+  end
+
+  def render_breadth_first_search_path
+    # If the search found the target
+    if breadth_first_search.visited.has_key?(state.target)
+      # Start from the target
+      endpoint = state.target
+      next_endpoint = breadth_first_search.came_from[endpoint]
+      while endpoint and next_endpoint
+        path = get_path_between(endpoint, next_endpoint)
+        outputs.solids << [scale_up(path), path_color]
+        endpoint = next_endpoint
+        next_endpoint = breadth_first_search.came_from[endpoint]
+      end
+    end
+  end
+
+  def render_dijkstra
+    render_dijkstra_heat_map
+    render_dijkstra_path
+  end
+
+  def render_dijkstra_heat_map
+    dijkstra_search.cost_so_far.each do |visited_cell, cost|
+      max_cost = (grid.width + grid.height) #* 5
+      alpha = 255.to_i * cost.to_i / max_cost.to_i
+      outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
+    end
+  end
+
+  def render_dijkstra_path
+    # If the search found the target
+    if dijkstra_search.came_from.has_key?(state.target)
+      # Get the target and the cell it came from
+      endpoint = state.target
+      next_endpoint = dijkstra_search.came_from[endpoint]
+      while endpoint and next_endpoint
+        # Draw a path between them
+        path = get_path_between(endpoint, next_endpoint)
+        outputs.solids << [early_exit_scale_up(path), path_color]
+
+        # Shift one cell down the path
+        endpoint = next_endpoint
+        next_endpoint = dijkstra_search.came_from[endpoint]
+
+        # Repeat till the end of the path
+      end
+    end
+  end
+
+  # Renders the star on both grids
+  def render_star
+    outputs.sprites << [scale_up(state.star), 'star.png']
+    outputs.sprites << [early_exit_scale_up(state.star), 'star.png']
+  end 
+
+  # Renders the target on both grids
+  def render_target
+    outputs.sprites << [scale_up(state.target), 'target.png']
+    outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
+  end 
+
+  def render_hills
+    state.hills.each_key do |hill| 
+      outputs.solids << [scale_up(hill), hill_color]
+      outputs.solids << [early_exit_scale_up(hill), hill_color]
+    end
+  end
+
+  # Draws the walls on both grids
+  def render_walls
+    state.walls.each_key do |wall| 
+      outputs.solids << [scale_up(wall), wall_color]
+      outputs.solids << [early_exit_scale_up(wall), wall_color]
+    end
+  end
+
+  def get_path_between(cell_one, cell_two)
+    if cell_one.x == cell_two.x
+      if cell_one.y < cell_two.y
+        return [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
+      else
+        return [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
+      end
+    else
+      if cell_one.x < cell_two.x
+        return [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
+      else
+        return [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
+      end
+    end
+    nil
+  end
+
+  # Representation of how far away visited cells are from the star
+  # Replaces the render_visited method
+  # Visually demonstrates the effectiveness of early exit for pathfinding
+  def render_breadth_first_search_heat_map
+    breadth_first_search.visited.each_key do | visited_cell |
+      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
+      max_distance = grid.width + grid.height
+      alpha = 255.to_i * distance.to_i / max_distance.to_i
+      outputs.solids << [scale_up(visited_cell), red, alpha]
+    end
+  end
+
+  # Translates the given cell grid.width + 1 to the right and then scales up
+  # Used to draw cells for the second grid
+  # This method does not work for lines,
+  # so separate methods exist for the grid lines
+  def early_exit_scale_up(cell)
+    cell_clone = cell.clone
+    cell_clone.x += grid.width + 1
+    scale_up(cell_clone)
+  end
+
+  # In code, the cells are represented as 1x1 rectangles
+  # When drawn, the cells are larger than 1x1 rectangles
+  # This method is used to scale up cells, and lines
+  # Objects are scaled up according to the grid.cell_size variable
+  # This allows for easy customization of the visual scale of the grid
+  def scale_up(cell)
+    # Prevents the original value of cell from being edited
+    cell = cell.clone
+
+    # If cell is just an x and y coordinate
+    if cell.size == 2
+      # Add a width and height of 1
+      cell << 1
+      cell << 1
+    end
+
+    # Scale all the values up
+    cell.map! { |value| value * grid.cell_size }
+
+    # Returns the scaled up cell
+    cell
+  end
+  # This method processes user input every tick
+  # Any method with "1" is related to the first grid
+  # Any method with "2" is related to the second grid
+  def input
+    # The program has to remember that the user is dragging an object
+    # even when the mouse is no longer over that object
+    # So detecting input and processing input is separate
+
+    if inputs.mouse.up
+      state.current_input = :none
+    end
+
+    if inputs.mouse.down
+      detect_input          
+    end
+
+    process_input         
+  end
+
+  # Determines what the user is editing and stores the value
+  # Storing the value allows the user to continue the same edit as long as the
+  # mouse left click is held
+  def detect_input
+    # When the mouse is up, nothing is being edited
+    # When the star in the no second grid is clicked
+    if mouse_over_star?                 
+      state.current_input = :star          
+      # When the star in the second grid is clicked
+    elsif mouse_over_star2?                 
+      state.current_input = :star2          
+      # When the target in the no second grid is clicked
+    elsif mouse_over_target?                 
+      state.current_input = :target          
+      # When the target in the second grid is clicked
+    elsif mouse_over_target2?                 
+      state.current_input = :target2 
+      # When a wall in the first grid is clicked
+    elsif mouse_over_wall?                 
+      state.current_input = :remove_wall   
+      # When a wall in the second grid is clicked
+    elsif mouse_over_wall2?                 
+      state.current_input = :remove_wall2
+    elsif mouse_over_hill?                 
+      state.current_input = :add_wall   
+      # When a wall in the second grid is clicked
+    elsif mouse_over_hill2?                 
+      state.current_input = :add_wall2
+      # When the first grid is clicked
+    elsif mouse_over_grid?                 
+      state.current_input = :add_hill
+      # When the second grid is clicked
+    elsif mouse_over_grid2?                 
+      state.current_input = :add_hill2
+    end
+  end
+
+  # Processes click and drag based on what the user is currently dragging
+  def process_input
+    if state.current_input == :star         
+      input_star                            
+    elsif state.current_input == :star2
+      input_star2                            
+    elsif state.current_input == :target         
+      input_target                            
+    elsif state.current_input == :target2         
+      input_target2                            
+    elsif state.current_input == :remove_wall  
+      input_remove_wall                     
+    elsif state.current_input == :remove_wall2
+      input_remove_wall2                     
+    elsif state.current_input == :add_hill     
+      input_add_hill                        
+    elsif state.current_input == :add_hill2     
+      input_add_hill2                        
+    elsif state.current_input == :add_wall     
+      input_add_wall                        
+    elsif state.current_input == :add_wall2     
+      input_add_wall2                        
+    end
+  end
+
+  # Calculates the two searches
+  def calc
+    # If the searches have not started
+    if breadth_first_search.visited.empty?
+      # Calculate the two searches
+      calc_breadth_first
+      calc_dijkstra
+    end
+  end
+  
 
   def calc_breadth_first
     # Sets up the Breadth First Search
@@ -115,6 +415,7 @@ class Dijkstra
     end
   end
 
+
   def cost(cell)
     if state.hills.has_key?(cell)
       return 5
@@ -123,310 +424,8 @@ class Dijkstra
     end
   end
 
-  # Draws everything onto the screen
-  def render
-    render_background       
-    render_star
-    render_target
-    render_labels
 
-    render_breadth_first_search
-    render_dijkstra
-    render_hills
-    render_walls
-  end
 
-  def render_breadth_first_search
-    render_breadth_first_search_heat_map
-    render_breadth_first_search_path
-  end
-
-  def render_dijkstra
-    render_dijkstra_heat_map
-    render_dijkstra_path
-  end
-
-  # Representation of how far away visited cells are from the star
-  # Replaces the render_visited method
-  # Visually demonstrates the effectiveness of early exit for pathfinding
-  def render_breadth_first_search_heat_map
-    breadth_first_search.visited.each_key do | visited_cell |
-      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
-      max_distance = grid.width + grid.height
-      alpha = 255.to_i * distance.to_i / max_distance.to_i
-      outputs.solids << [scale_up(visited_cell), red, alpha]
-    end
-  end
-
-  def render_dijkstra_heat_map
-    dijkstra_search.cost_so_far.each do |visited_cell, cost|
-      max_cost = (grid.width + grid.height) #* 5
-      alpha = 255.to_i * cost.to_i / max_cost.to_i
-      outputs.solids << [early_exit_scale_up(visited_cell), red, alpha]
-    end
-  end
-
-  # The methods below subdivide the task of drawing everything to the screen
-
-  # Draws what the grid looks like with nothing on it
-  def render_background
-    render_unvisited  
-    render_grid_lines 
-  end
-
-  # Draws both grids
-  def render_unvisited
-    outputs.solids << [scale_up(grid.rect), unvisited_color]
-    outputs.solids << [early_exit_scale_up(grid.rect), unvisited_color]
-  end
-
-  # Draws grid lines to show the division of the grid into cells
-  def render_grid_lines
-    for x in 0..grid.width
-      outputs.lines << vertical_line(x)
-      outputs.lines << early_exit_vertical_line(x)
-    end
-
-    for y in 0..grid.height
-      outputs.lines << horizontal_line(y) 
-      outputs.lines << early_exit_horizontal_line(y)
-    end
-  end
-
-  # Easy way to draw vertical lines given an index
-  def vertical_line column
-    scale_up([column, 0, column, grid.height])
-  end
-
-  # Easy way to draw horizontal lines given an index
-  def horizontal_line row
-    scale_up([0, row, grid.width, row])
-  end
-
-  # Easy way to draw vertical lines given an index
-  def early_exit_vertical_line column
-    scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
-  end
-
-  # Easy way to draw horizontal lines given an index
-  def early_exit_horizontal_line row
-    scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
-  end
-
-  def render_hills
-    state.hills.each_key do |hill| 
-      outputs.solids << [scale_up(hill), hill_color]
-      outputs.solids << [early_exit_scale_up(hill), hill_color]
-    end
-  end
-
-  # Draws the walls on both grids
-  def render_walls
-    state.walls.each_key do |wall| 
-      outputs.solids << [scale_up(wall), wall_color]
-      outputs.solids << [early_exit_scale_up(wall), wall_color]
-    end
-  end
-
-  # Renders the star on both grids
-  def render_star
-    outputs.sprites << [scale_up(state.star), 'star.png']
-    outputs.sprites << [early_exit_scale_up(state.star), 'star.png']
-  end 
-
-  # Renders the target on both grids
-  def render_target
-    outputs.sprites << [scale_up(state.target), 'target.png']
-    outputs.sprites << [early_exit_scale_up(state.target), 'target.png']
-  end 
-
-  # Labels the grids
-  def render_labels
-    outputs.labels << [175, 650, "Number of steps", 3]
-    outputs.labels << [925, 650, "Distance", 3]
-  end
-
-  def render_dijkstra_path
-    # If the search found the target
-    if dijkstra_search.came_from.has_key?(state.target)
-      # Get the target and the cell it came from
-      endpoint = state.target
-      next_endpoint = dijkstra_search.came_from[endpoint]
-      while endpoint and next_endpoint
-        # Draw a path between them
-        path = get_path_between(endpoint, next_endpoint)
-        outputs.solids << [early_exit_scale_up(path), path_color]
-
-        # Shift one cell down the path
-        endpoint = next_endpoint
-        next_endpoint = dijkstra_search.came_from[endpoint]
-
-        # Repeat till the end of the path
-      end
-    end
-  end
-
-  def render_breadth_first_search_path
-    # If the search found the target
-    if breadth_first_search.visited.has_key?(state.target)
-      # Start from the target
-      endpoint = state.target
-      next_endpoint = breadth_first_search.came_from[endpoint]
-      while endpoint and next_endpoint
-        path = get_path_between(endpoint, next_endpoint)
-        outputs.solids << [scale_up(path), path_color]
-        endpoint = next_endpoint
-        next_endpoint = breadth_first_search.came_from[endpoint]
-      end
-    end
-  end
-
-  def get_path_between(cell_one, cell_two)
-    if cell_one.x == cell_two.x
-      if cell_one.y < cell_two.y
-        return [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
-      else
-        return [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
-      end
-    else
-      if cell_one.x < cell_two.x
-        return [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
-      else
-        return [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
-      end
-    end
-    nil
-  end
-  # Calculates the path from the target to the star after the search is over
-  # Relies on the came_from hash
-  # Fills the state.path hash, which is later rendered on screen
-  def calc_path
-    endpoint = state.target
-    while endpoint
-      breadth_first_search.path[endpoint] = true
-      endpoint = breadth_first_search.came_from[endpoint]
-    end
-  end
-
-  # Representation of how far away visited cells are from the star
-  # Replaces the render_visited method
-  # Visually demonstrates the effectiveness of early exit for pathfinding
-  def render_breadth_first_search_heat_map
-    breadth_first_search.visited.each_key do | visited_cell |
-      distance = (state.star.x - visited_cell.x).abs + (state.star.y - visited_cell.y).abs
-      max_distance = grid.width + grid.height
-      alpha = 255.to_i * distance.to_i / max_distance.to_i
-      outputs.solids << [scale_up(visited_cell), red, alpha]
-    end
-  end
-
-  # Translates the given cell grid.width + 1 to the right and then scales up
-  # Used to draw cells for the second grid
-  # This method does not work for lines,
-  # so separate methods exist for the grid lines
-  def early_exit_scale_up(cell)
-    cell_clone = cell.clone
-    cell_clone.x += grid.width + 1
-    scale_up(cell_clone)
-  end
-
-  # In code, the cells are represented as 1x1 rectangles
-  # When drawn, the cells are larger than 1x1 rectangles
-  # This method is used to scale up cells, and lines
-  # Objects are scaled up according to the grid.cell_size variable
-  # This allows for easy customization of the visual scale of the grid
-  def scale_up(cell)
-    # Prevents the original value of cell from being edited
-    cell = cell.clone
-
-    # If cell is just an x and y coordinate
-    if cell.size == 2
-      # Add a width and height of 1
-      cell << 1
-      cell << 1
-    end
-
-    # Scale all the values up
-    cell.map! { |value| value * grid.cell_size }
-
-    # Returns the scaled up cell
-    cell
-  end
-
-  # This method processes user input every tick
-  # Any method with "1" is related to the first grid
-  # Any method with "2" is related to the second grid
-  def input
-    # The program has to remember that the user is dragging an object
-    # even when the mouse is no longer over that object
-    # So detecting input and processing input is separate
-    detect_input          
-    process_input         
-  end
-
-  # Determines what the user is editing and stores the value
-  # Storing the value allows the user to continue the same edit as long as the
-  # mouse left click is held
-  def detect_input
-    # When the mouse is up, nothing is being edited
-    if inputs.mouse.up                  
-      state.current_input = :none          
-      # When the star in the no second grid is clicked
-    elsif star_clicked?                 
-      state.current_input = :star          
-      # When the star in the second grid is clicked
-    elsif star2_clicked?                 
-      state.current_input = :star2          
-      # When the target in the no second grid is clicked
-    elsif target_clicked?                 
-      state.current_input = :target          
-      # When the target in the second grid is clicked
-    elsif target2_clicked?                 
-      state.current_input = :target2 
-      # When a wall in the first grid is clicked
-    elsif wall_clicked?                 
-      state.current_input = :remove_wall   
-      # When a wall in the second grid is clicked
-    elsif wall2_clicked?                 
-      state.current_input = :remove_wall2
-    elsif hill_clicked?                 
-      state.current_input = :add_wall   
-      # When a wall in the second grid is clicked
-    elsif hill2_clicked?                 
-      state.current_input = :add_wall2
-      # When the first grid is clicked
-    elsif grid_clicked?                 
-      state.current_input = :add_hill
-      # When the second grid is clicked
-    elsif grid2_clicked?                 
-      state.current_input = :add_hill2
-    end
-  end
-
-  # Processes click and drag based on what the user is currently dragging
-  def process_input
-    if state.current_input == :star         
-      input_star                            
-    elsif state.current_input == :star2
-      input_star2                            
-    elsif state.current_input == :target         
-      input_target                            
-    elsif state.current_input == :target2         
-      input_target2                            
-    elsif state.current_input == :remove_wall  
-      input_remove_wall                     
-    elsif state.current_input == :remove_wall2
-      input_remove_wall2                     
-    elsif state.current_input == :add_hill     
-      input_add_hill                        
-    elsif state.current_input == :add_hill2     
-      input_add_hill2                        
-    elsif state.current_input == :add_wall     
-      input_add_wall                        
-    elsif state.current_input == :add_wall2     
-      input_add_wall2                        
-    end
-  end
 
   # Moves the star to the cell closest to the mouse in the first grid
   # Only resets the search if the star changes position
@@ -485,7 +484,7 @@ class Dijkstra
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
-    if mouse_inside_grid? 
+    if mouse_over_grid? 
       if state.walls.has_key?(cell_closest_to_mouse) or state.hills.has_key?(cell_closest_to_mouse)
         state.walls.delete(cell_closest_to_mouse) 
         state.hills.delete(cell_closest_to_mouse) 
@@ -499,7 +498,7 @@ class Dijkstra
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
-    if mouse_inside_grid2? 
+    if mouse_over_grid2? 
       if state.walls.has_key?(cell_closest_to_mouse2) or state.hills.has_key?(cell_closest_to_mouse2)
         state.walls.delete(cell_closest_to_mouse2) 
         state.hills.delete(cell_closest_to_mouse2) 
@@ -510,7 +509,7 @@ class Dijkstra
 
   # Adds a hill in the first grid in the cell the mouse is over
   def input_add_hill
-    if mouse_inside_grid? 
+    if mouse_over_grid? 
       unless state.hills.has_key?(cell_closest_to_mouse)
         state.hills[cell_closest_to_mouse] = true 
         reset_search 
@@ -521,7 +520,7 @@ class Dijkstra
 
   # Adds a hill in the second grid in the cell the mouse is over
   def input_add_hill2
-    if mouse_inside_grid2? 
+    if mouse_over_grid2? 
       unless state.hills.has_key?(cell_closest_to_mouse2)
         state.hills[cell_closest_to_mouse2] = true 
         reset_search 
@@ -531,7 +530,7 @@ class Dijkstra
 
   # Adds a wall in the first grid in the cell the mouse is over
   def input_add_wall
-    if mouse_inside_grid? 
+    if mouse_over_grid? 
       unless state.walls.has_key?(cell_closest_to_mouse)
         state.hills.delete(cell_closest_to_mouse) 
         state.walls[cell_closest_to_mouse] = true 
@@ -542,8 +541,8 @@ class Dijkstra
 
   # Adds a wall in the second grid in the cell the mouse is over
   def input_add_wall2
-    if mouse_inside_grid2? 
-      unless state.walls.has_key?(cell_closest_to_mouse)
+    if mouse_over_grid2? 
+      unless state.walls.has_key?(cell_closest_to_mouse2)
         state.hills.delete(cell_closest_to_mouse2) 
         state.walls[cell_closest_to_mouse2] = true 
         reset_search 
@@ -636,58 +635,27 @@ class Dijkstra
   end
 
   # Signal that the user is going to be moving the star from the first grid
-  def star_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.star))
+  def mouse_over_star?
+    inputs.mouse.point.inside_rect?(scale_up(state.star))
   end
 
   # Signal that the user is going to be moving the star from the second grid
-  def star2_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?(early_exit_scale_up(state.star))
+  def mouse_over_star2?
+    inputs.mouse.point.inside_rect?(early_exit_scale_up(state.star))
   end
 
   # Signal that the user is going to be moving the target from the first grid
-  def target_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?(scale_up(state.target))
+  def mouse_over_target?
+    inputs.mouse.point.inside_rect?(scale_up(state.target))
   end
 
   # Signal that the user is going to be moving the target from the second grid
-  def target2_clicked?
-    inputs.mouse.down && inputs.mouse.point.inside_rect?(early_exit_scale_up(state.target))
+  def mouse_over_target2?
+    inputs.mouse.point.inside_rect?(early_exit_scale_up(state.target))
   end
 
   # Signal that the user is going to be removing walls from the first grid
-  def wall_clicked?
-    inputs.mouse.down && mouse_inside_wall?
-  end
-
-  # Signal that the user is going to be removing walls from the second grid
-  def wall2_clicked?
-    inputs.mouse.down && mouse_inside_wall2?
-  end
-
-  # Signal that the user is going to be removing hills from the first grid
-  def hill_clicked?
-    inputs.mouse.down && mouse_inside_hill?
-  end
-
-  # Signal that the user is going to be removing hills from the second grid
-  def hill2_clicked?
-    inputs.mouse.down && mouse_inside_hill2?
-  end
-
-  # Signal that the user is going to be adding walls from the first grid
-  def grid_clicked?
-    inputs.mouse.down && mouse_inside_grid?
-  end
-
-  # Signal that the user is going to be adding walls from the second grid
-  def grid2_clicked?
-    inputs.mouse.down && mouse_inside_grid2?
-  end
-
-  # Returns whether the mouse is inside of a wall in the first grid
-  # Part of the condition that checks whether the user is removing a wall
-  def mouse_inside_wall?
+  def mouse_over_wall?
     state.walls.each_key do | wall |
       return true if inputs.mouse.point.inside_rect?(scale_up(wall))
     end
@@ -695,9 +663,8 @@ class Dijkstra
     false
   end
 
-  # Returns whether the mouse is inside of a wall in the second grid
-  # Part of the condition that checks whether the user is removing a wall
-  def mouse_inside_wall2?
+  # Signal that the user is going to be removing walls from the second grid
+  def mouse_over_wall2?
     state.walls.each_key do | wall |
       return true if inputs.mouse.point.inside_rect?(early_exit_scale_up(wall))
     end
@@ -705,7 +672,8 @@ class Dijkstra
     false
   end
 
-  def mouse_inside_hill?
+  # Signal that the user is going to be removing hills from the first grid
+  def mouse_over_hill?
     state.hills.each_key do | hill |
       return true if inputs.mouse.point.inside_rect?(scale_up(hill))
     end
@@ -713,24 +681,22 @@ class Dijkstra
     false
   end
 
-  # Returns whether the mouse is inside of a hill in the second grid
-  # Part of the condition that checks whether the user is removing a hill
-  def mouse_inside_hill2?
+  # Signal that the user is going to be removing hills from the second grid
+  def mouse_over_hill2?
     state.hills.each_key do | hill |
       return true if inputs.mouse.point.inside_rect?(early_exit_scale_up(hill))
     end
 
     false
   end
-  # Returns whether the mouse is inside of the first grid
-  # Part of the condition that checks whether the user is adding a wall
-  def mouse_inside_grid?
+
+  # Signal that the user is going to be adding walls from the first grid
+  def mouse_over_grid?
     inputs.mouse.point.inside_rect?(scale_up(grid.rect))
   end
 
-  # Returns whether the mouse is inside of the second grid
-  # Part of the condition that checks whether the user is adding a wall
-  def mouse_inside_grid2?
+  # Signal that the user is going to be adding walls from the second grid
+  def mouse_over_grid2?
     inputs.mouse.point.inside_rect?(early_exit_scale_up(grid.rect))
   end
 
