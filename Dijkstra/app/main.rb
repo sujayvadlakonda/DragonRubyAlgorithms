@@ -412,7 +412,7 @@ class Dijkstra
       # Takes the next frontier cell
       new_frontier = breadth_first_search.frontier.shift 
       # For each of its neighbors
-      adjacent_neighbors(*new_frontier).each do | neighbor | 
+      adjacent_neighbors(new_frontier).each do | neighbor | 
         # That have not been visited and are not walls
         unless breadth_first_search.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited in the first grid
@@ -443,7 +443,7 @@ class Dijkstra
       return if current == state.target
 
       # For each of the neighbors
-      adjacent_neighbors(*current).each do | neighbor |
+      adjacent_neighbors(current).each do | neighbor |
         # Unless this cell is a wall or has already been explored.
         unless dijkstra_search.came_from.has_key?(neighbor) or state.walls.has_key?(neighbor)
           # Calculate the movement cost of getting to this cell and memo
@@ -613,15 +613,15 @@ class Dijkstra
 
   # Returns a list of adjacent cells
   # Used to determine what the next cells to be added to the frontier are
-  def adjacent_neighbors(x, y)
+  def adjacent_neighbors(cell)
     neighbors = [] 
 
     # Gets all the valid neighbors into the array
     # From southern neighbor, clockwise
-    neighbors << [x, y - 1] unless y == 0 
-    neighbors << [x - 1, y] unless x == 0 
-    neighbors << [x, y + 1] unless y == grid.height - 1 
-    neighbors << [x + 1, y] unless x == grid.width - 1 
+    neighbors << [cell.x    , cell.y - 1] unless cell.y == 0 
+    neighbors << [cell.x - 1, cell.y    ] unless cell.x == 0 
+    neighbors << [cell.x    , cell.y + 1] unless cell.y == grid.height - 1 
+    neighbors << [cell.x + 1, cell.y    ] unless cell.x == grid.width - 1 
 
     # Sorts the neighbors so the rendered path is a zigzag path
     # Cells in a diagonal direction are given priority

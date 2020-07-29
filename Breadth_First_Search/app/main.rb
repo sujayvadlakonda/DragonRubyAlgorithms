@@ -462,7 +462,7 @@ class BreadthFirstSearch
       # Takes the next frontier cell
       new_frontier = state.frontier.shift 
       # For each of its neighbors
-      adjacent_neighbors(*new_frontier).each do |neighbor| 
+      adjacent_neighbors(new_frontier).each do |neighbor| 
         # That have not been visited and are not walls
         unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited
@@ -476,13 +476,13 @@ class BreadthFirstSearch
 
   # Returns a list of adjacent cells
   # Used to determine what the next cells to be added to the frontier are
-  def adjacent_neighbors(x, y)
+  def adjacent_neighbors(cell)
     neighbors = [] 
 
-    neighbors << [x, y + 1] unless y == grid.height - 1 
-    neighbors << [x + 1, y] unless x == grid.width - 1 
-    neighbors << [x, y - 1] unless y == 0 
-    neighbors << [x - 1, y] unless x == 0 
+    neighbors << [cell.x, cell.y + 1] unless cell.y == grid.height - 1 
+    neighbors << [cell.x + 1, cell.y] unless cell.x == grid.width - 1 
+    neighbors << [cell.x, cell.y - 1] unless cell.y == 0 
+    neighbors << [cell.x - 1, cell.y] unless cell.x == 0 
 
     neighbors 
   end

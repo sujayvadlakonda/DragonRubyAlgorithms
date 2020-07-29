@@ -444,15 +444,15 @@ class EarlyExitBreadthFirstSearch
 
   # Returns a list of adjacent cells
   # Used to determine what the next cells to be added to the frontier are
-  def adjacent_neighbors(x, y)
+  def adjacent_neighbors(cell)
     neighbors = [] 
 
     # Gets all the valid neighbors into the array
     # From southern neighbor, clockwise
-    neighbors << [x, y - 1] unless y == 0 
-    neighbors << [x - 1, y] unless x == 0 
-    neighbors << [x, y + 1] unless y == grid.height - 1 
-    neighbors << [x + 1, y] unless x == grid.width - 1 
+    neighbors << [cell.x, cell.y - 1] unless cell.y == 0 
+    neighbors << [cell.x - 1, cell.y] unless cell.x == 0 
+    neighbors << [cell.x, cell.y + 1] unless cell.y == grid.height - 1 
+    neighbors << [cell.x + 1, cell.y] unless cell.x == grid.width - 1 
 
     # Sorts the neighbors so the rendered path is a zigzag path
     # Cells in a diagonal direction are given priority
