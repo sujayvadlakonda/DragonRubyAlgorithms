@@ -35,10 +35,38 @@ class Dijkstra
     # The location of the star and walls of the grid
     # They can be modified to have a different initial grid
     # Walls are stored in a hash for quick look up when doing the search
-    state.star   ||= [0, 0]
-    state.target ||= [0, 2]
-    state.walls  ||= {}    
-    state.hills  ||= {}
+    state.star   ||= [1, 5]
+    state.target ||= [8, 4]
+    state.walls  ||= {[1, 1] => true, [2, 1] => true, [3, 1] => true, [1, 2] => true, [2, 2] => true, [3, 2] => true}    
+    state.hills  ||= {
+      [4, 1] => true,
+      [5, 1] => true,
+      [4, 2] => true,
+      [5, 2] => true,
+      [6, 2] => true,
+      [4, 3] => true,
+      [5, 3] => true,
+      [6, 3] => true,
+      [3, 4] => true,
+      [4, 4] => true,
+      [5, 4] => true,
+      [6, 4] => true,
+      [7, 4] => true,
+      [3, 5] => true,
+      [4, 5] => true,
+      [5, 5] => true,
+      [6, 5] => true,
+      [7, 5] => true,
+      [4, 6] => true,
+      [5, 6] => true,
+      [6, 6] => true,
+      [7, 6] => true,
+      [4, 7] => true,
+      [5, 7] => true,
+      [6, 7] => true,
+      [4, 8] => true,
+      [5, 8] => true,
+    }
 
     # What the user is currently editing on the grid
     # We store this value, because we want to remember the value even when
@@ -70,13 +98,14 @@ class Dijkstra
   def render
     render_background       
 
-    render_breadth_first_search
-    render_dijkstra
+    render_heat_maps
 
     render_star
     render_target
     render_hills
     render_walls
+
+    render_paths
   end
   # The methods below subdivide the task of drawing everything to the screen
 
@@ -133,10 +162,18 @@ class Dijkstra
     outputs.labels << [925, 650, "Distance", 3]
   end
 
+  def render_paths
+    render_breadth_first_search_path
+    render_dijkstra_path
+  end
+
+  def render_heat_maps
+    render_breadth_first_search_heat_map
+    render_dijkstra_heat_map
+  end
+
   # Renders the breadth first search on the first grid
   def render_breadth_first_search
-    render_breadth_first_search_heat_map
-    render_breadth_first_search_path
   end
 
   # This heat map shows the cells explored by the breadth first search and how far they are from the star.
@@ -173,8 +210,6 @@ class Dijkstra
 
   # Renders the Dijkstra search on the second grid
   def render_dijkstra
-    render_dijkstra_heat_map
-    render_dijkstra_path
   end
 
   def render_dijkstra_heat_map

@@ -51,7 +51,7 @@ class DetailedBreadthFirstSearch
     # The location of the star and walls of the grid
     # They can be modified to have a different initial grid
     # Walls are stored in a hash for quick look up when doing the search
-    args.state.star       = [0, 0]
+    args.state.star       = [3, 2]
     args.state.walls      = {}    
 
     # Variables that are used by the breadth first search
@@ -141,7 +141,7 @@ class DetailedBreadthFirstSearch
 
     # Renders an explanatory label in the center of the button
     # Explains to the user what the button does
-    label_x = buttons.left.x + 10
+    label_x = buttons.left.x + 05
     label_y = buttons.left.y + 35
     outputs.labels  << [label_x, label_y, "< Step backward"]
   end

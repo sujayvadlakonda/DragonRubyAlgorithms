@@ -48,8 +48,8 @@ class EarlyExitBreadthFirstSearch
     # The location of the star and walls of the grid
     # They can be modified to have a different initial grid
     # Walls are stored in a hash for quick look up when doing the search
-    state.star   ||= [0, 0]
-    state.target ||= [0, 2]
+    state.star   ||= [2, 8]
+    state.target ||= [10, 5]
     state.walls  ||= {}    
 
     # Variables that are used by the breadth first search
@@ -422,7 +422,7 @@ class EarlyExitBreadthFirstSearch
       # Takes the next frontier cell
       new_frontier = state.frontier.shift 
       # For each of its neighbors
-      adjacent_neighbors(*new_frontier).each do |neighbor| 
+      adjacent_neighbors(new_frontier).each do |neighbor| 
         # That have not been visited and are not walls
         unless state.visited.has_key?(neighbor) || state.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited in the first grid
