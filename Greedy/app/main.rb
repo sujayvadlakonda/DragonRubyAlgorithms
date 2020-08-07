@@ -132,6 +132,110 @@ class Greedy
     render_right_button
   end
 
+  def render_bfs
+    render_bfs_grid
+    render_bfs_star
+    render_bfs_target
+    render_bfs_visited
+    render_bfs_walls
+    render_bfs_frontier
+    render_bfs_path
+  end
+
+  def render_greedy
+    render_greedy_grid
+    render_greedy_star
+    render_greedy_target
+    render_greedy_visited
+    render_greedy_walls
+    render_greedy_frontier
+    render_greedy_path
+  end
+
+  # This method handles user input every tick
+  def input
+    # Check and handle button input
+    input_buttons
+
+    # If the mouse was lifted this tick
+    if inputs.mouse.up
+      # Set current input to none
+      state.user_input = :none
+    end
+
+    # If the mouse was clicked this tick
+    if inputs.mouse.down
+      # Determine what the user is editing and appropriately edit the state.user_input variable
+      determine_input          
+    end
+
+    # Process user input based on user_input variable and current mouse position
+    process_input
+  end
+
+  # Determines what the user is editing
+  # This method is called when the mouse is clicked down
+  def determine_input
+    if mouse_over_slider?
+      state.user_input = :slider
+    # If the mouse is over the star in the first grid
+    elsif bfs_mouse_over_star?                 
+      # The user is editing the star from the first grid
+      state.user_input = :bfs_star          
+    # If the mouse is over the star in the second grid
+    elsif greedy_mouse_over_star?                 
+      # The user is editing the star from the second grid
+      state.user_input = :greedy_star          
+    # If the mouse is over the target in the first grid
+    elsif bfs_mouse_over_target?                 
+      # The user is editing the target from the first grid
+      state.user_input = :bfs_target          
+    # If the mouse is over the target in the second grid
+    elsif greedy_mouse_over_target?                 
+      # The user is editing the target from the second grid
+      state.user_input = :greedy_target 
+    # If the mouse is over a wall in the first grid
+    elsif bfs_mouse_over_wall?                 
+      # The user is removing a wall from the first grid
+      state.user_input = :bfs_remove_wall   
+    # If the mouse is over a wall in the second grid
+    elsif greedy_mouse_over_wall?                 
+      # The user is removing a wall from the second grid
+      state.user_input = :greedy_remove_wall
+    # If the mouse is over the first grid
+    elsif bfs_mouse_over_grid?                 
+      # The user is adding a wall from the first grid
+      state.user_input = :bfs_add_wall
+    # If the mouse is over the second grid
+    elsif greedy_mouse_over_grid?                 
+      # The user is adding a wall from the second grid
+      state.user_input = :greedy_add_wall
+    end
+  end
+
+  # Processes click and drag based on what the user is currently dragging
+  def process_input
+    if state.user_input == :slider
+      process_input_slider
+    elsif state.user_input == :bfs_star         
+      process_input_bfs_star                            
+    elsif state.user_input == :greedy_star
+      process_input_greedy_star                            
+    elsif state.user_input == :bfs_target         
+      process_input_bfs_target                            
+    elsif state.user_input == :greedy_target         
+      process_input_greedy_target                            
+    elsif state.user_input == :bfs_remove_wall  
+      process_input_bfs_remove_wall                     
+    elsif state.user_input == :greedy_remove_wall
+      process_input_greedy_remove_wall                     
+    elsif state.user_input == :bfs_add_wall     
+      process_input_bfs_add_wall                        
+    elsif state.user_input == :greedy_add_wall     
+      process_input_greedy_add_wall                        
+    end
+  end
+
   def render_slider
     # Using primitives hides the line under the white circle of the slider
     # Draws the line
@@ -194,29 +298,9 @@ class Greedy
     outputs.labels  << [label_x, label_y, ">"]
   end
 
-  def render_bfs
-    render_bfs_grid
-    render_bfs_star
-    render_bfs_target
-    render_bfs_visited
-    render_bfs_walls
-    render_bfs_frontier
-    render_bfs_path
-  end
-
-  def render_greedy
-    render_greedy_grid
-    render_greedy_star
-    render_greedy_target
-    render_greedy_visited
-    render_greedy_walls
-    render_greedy_frontier
-    render_greedy_path
-  end
-
   def render_bfs_grid
     # A large rect the size of the grid
-    outputs.solids << [bfs_scale_up(grid.rect), unvisited_color]
+    outputs.solids << [bfs_scale_up(grid.rect), default_color]
 
     # The vertical grid lines
     for x in 0..grid.width
@@ -231,7 +315,7 @@ class Greedy
 
   def render_greedy_grid
     # A large rect the size of the grid
-    outputs.solids << [greedy_scale_up(grid.rect), unvisited_color]
+    outputs.solids << [greedy_scale_up(grid.rect), default_color]
 
     # The vertical grid lines
     for x in 0..grid.width
@@ -335,38 +419,33 @@ class Greedy
 
   # Renders the path found by the greedy search on the second grid
   def render_greedy_path
-    return unless greedy.came_from.has_key?(grid.target)
-    # Start from the target
-    endpoint = grid.target
-    # And the cell it came from
-    next_endpoint = greedy.came_from[endpoint]
-    while endpoint and next_endpoint
-      # Draw a path between these two cells
-      path = get_path_between(endpoint, next_endpoint)
+    greedy.path.each do | path |
       outputs.solids << [greedy_scale_up(path), path_color]
-      # And get the next pair of cells
-      endpoint = next_endpoint
-      next_endpoint = greedy.came_from[endpoint]
-      # Continue till there are no more cells
     end
   end
 
   # Returns the rect for the path between two cells based on their relative positions
   def get_path_between(cell_one, cell_two)
     path = nil
-    if cell_one.x == cell_two.x
-      if cell_one.y < cell_two.y
-        path = [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
-      else
-        path = [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
-      end
-    else
-      if cell_one.x < cell_two.x
-        path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
-      else
-        path = [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
-      end
+
+    # If cell one is above cell two
+    if cell_one.x == cell_two.x and cell_one.y > cell_two.y
+      # Path starts from the center of cell two and moves upward to the center of cell one
+      path = [cell_two.x + 0.3, cell_two.y + 0.3, 0.4, 1.4]
+    # If cell one is below cell two
+    elsif cell_one.x == cell_two.x and cell_one.y < cell_two.y
+      # Path starts from the center of cell one and moves upward to the center of cell two
+      path = [cell_one.x + 0.3, cell_one.y + 0.3, 0.4, 1.4]
+    # If cell one is to the left of cell two
+    elsif cell_one.x > cell_two.x and cell_one.y == cell_two.y
+      # Path starts from the center of cell two and moves rightward to the center of cell one
+      path = [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
+    # If cell one is to the right of cell two
+    elsif cell_one.x > cell_two.x and cell_one.y == cell_two.y
+      # Path starts from the center of cell one and moves rightward to the center of cell two
+      path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
     end
+
     path
   end
 
@@ -407,26 +486,6 @@ class Greedy
     bfs_scale_up(cell)
   end
 
-  # This method handles user input every tick
-  def input
-    # If the mouse was lifted this tick
-    if inputs.mouse.up
-      # Set current input to none
-      state.user_input = :none
-      # Check if the mouse was lifted up on a button
-      input_buttons
-    end
-
-    # If the mouse was clicked this tick
-    if inputs.mouse.down
-      # Determine what the user is editing and appropriately edit the state.user_input variable
-      determine_input          
-    end
-
-    # Process user input based on user_input variable and current mouse position
-    process_input
-  end
-
   # Checks and handles input for the buttons
   # Called when the mouse is lifted
   def input_buttons
@@ -448,7 +507,7 @@ class Greedy
   # Controls the play/pause button
   # Inverses whether the animation is playing or not when clicked
   def input_center_button
-    if center_button_clicked?
+    if center_button_clicked? || inputs.keyboard.key_down.space
       state.play = !state.play         
     end
   end
@@ -465,56 +524,17 @@ class Greedy
 
   # These methods detect when the buttons are clicked
   def left_button_clicked?
-    inputs.mouse.point.inside_rect?(buttons.left)
+    inputs.mouse.point.inside_rect?(buttons.left) && inputs.mouse.up
   end
 
   def center_button_clicked?
-    inputs.mouse.point.inside_rect?(buttons.center)
+    inputs.mouse.point.inside_rect?(buttons.center) && inputs.mouse.up
   end
 
   def right_button_clicked?
-    inputs.mouse.point.inside_rect?(buttons.right)
+    inputs.mouse.point.inside_rect?(buttons.right) && inputs.mouse.up
   end
 
-  # Determines what the user is editing
-  # This method is called when the mouse is clicked down
-  def determine_input
-    if mouse_over_slider?
-      state.user_input = :slider
-    # If the mouse is over the star in the first grid
-    elsif bfs_mouse_over_star?                 
-      # The user is editing the star from the first grid
-      state.user_input = :bfs_star          
-    # If the mouse is over the star in the second grid
-    elsif greedy_mouse_over_star?                 
-      # The user is editing the star from the second grid
-      state.user_input = :greedy_star          
-    # If the mouse is over the target in the first grid
-    elsif bfs_mouse_over_target?                 
-      # The user is editing the target from the first grid
-      state.user_input = :bfs_target          
-    # If the mouse is over the target in the second grid
-    elsif greedy_mouse_over_target?                 
-      # The user is editing the target from the second grid
-      state.user_input = :greedy_target 
-    # If the mouse is over a wall in the first grid
-    elsif bfs_mouse_over_wall?                 
-      # The user is removing a wall from the first grid
-      state.user_input = :bfs_remove_wall   
-    # If the mouse is over a wall in the second grid
-    elsif greedy_mouse_over_wall?                 
-      # The user is removing a wall from the second grid
-      state.user_input = :greedy_remove_wall
-    # If the mouse is over the first grid
-    elsif bfs_mouse_over_grid?                 
-      # The user is adding a wall from the first grid
-      state.user_input = :bfs_add_wall
-    # If the mouse is over the second grid
-    elsif greedy_mouse_over_grid?                 
-      # The user is adding a wall from the second grid
-      state.user_input = :greedy_add_wall
-    end
-  end
 
   # Signal that the user is going to be moving the slider
   # Is the mouse over the circle of the slider?
@@ -524,7 +544,6 @@ class Greedy
     circle_rect = [circle_x, circle_y, 37, 37]
     inputs.mouse.point.inside_rect?(circle_rect)
   end
-
 
   # Signal that the user is going to be moving the star from the first grid
   def bfs_mouse_over_star?
@@ -572,29 +591,6 @@ class Greedy
   # Signal that the user is going to be adding walls from the second grid
   def greedy_mouse_over_grid?
     inputs.mouse.point.inside_rect?(greedy_scale_up(grid.rect))
-  end
-
-  # Processes click and drag based on what the user is currently dragging
-  def process_input
-    if state.user_input == :slider
-      process_input_slider
-    elsif state.user_input == :bfs_star         
-      process_input_bfs_star                            
-    elsif state.user_input == :greedy_star
-      process_input_greedy_star                            
-    elsif state.user_input == :bfs_target         
-      process_input_bfs_target                            
-    elsif state.user_input == :greedy_target         
-      process_input_greedy_target                            
-    elsif state.user_input == :bfs_remove_wall  
-      process_input_bfs_remove_wall                     
-    elsif state.user_input == :greedy_remove_wall
-      process_input_greedy_remove_wall                     
-    elsif state.user_input == :bfs_add_wall     
-      process_input_bfs_add_wall                        
-    elsif state.user_input == :greedy_add_wall     
-      process_input_greedy_add_wall                        
-    end
   end
 
   # This method is called when the user is editing the slider
@@ -799,7 +795,7 @@ class Greedy
   end
 
   # Calculates the path between the target and star for the breadth first search
-  # Only called when the breadth first search finds the star
+  # Only called when the breadth first search finds the target
   def bfs_calc_path
     # Start from the target
     endpoint = grid.target
@@ -851,12 +847,36 @@ class Greedy
     greedy.frontier = greedy.frontier.sort_by {| cell | proximity_to_star(cell) }
     # Sort the frontier so cells that are close to the target are then prioritized
     greedy.frontier = greedy.frontier.sort_by {| cell | greedy_heuristic(cell)  }
+
+    # If the search found the target
+    if greedy.came_from.has_key?(grid.target)
+      # Calculate the path between the target and star
+      greedy_calc_path
+    end
   end
 
   # Returns one-dimensional absolute distance between cell and target
   # Returns a number to compare distances between cells and the target
-  def greedy_heuristic(current_cell)
-    (grid.target.x - current_cell.x).abs + (grid.target.y - current_cell.y).abs
+  def greedy_heuristic(cell)
+    (grid.target.x - cell.x).abs + (grid.target.y - cell.y).abs
+  end
+
+  # Calculates the path between the target and star for the greedy search
+  # Only called when the greedy search finds the target
+  def greedy_calc_path
+    # Start from the target
+    endpoint = grid.target
+    # And the cell it came from
+    next_endpoint = greedy.came_from[endpoint]
+    while endpoint and next_endpoint
+      # Draw a path between these two cells and store it
+      path = get_path_between(endpoint, next_endpoint)
+      greedy.path << path
+      # And get the next pair of cells
+      endpoint = next_endpoint
+      next_endpoint = greedy.came_from[endpoint]
+      # Continue till there are no more cells
+    end
   end
 
   # Returns a list of adjacent cells
@@ -913,7 +933,7 @@ class Greedy
   end
 
   # Descriptive aliases for colors
-  def unvisited_color
+  def default_color
     [221, 212, 213] # Light Brown
   end
 
