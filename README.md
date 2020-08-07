@@ -24,3 +24,10 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 # Dijkstra
 ![](gifs/Dijkstra.gif)
+
+# Greedy
+![](gifs/Greedy.gif)
+
+# Greedy_With_Walls
+![](gifs/Greedy_With_Walls.gif)
+
