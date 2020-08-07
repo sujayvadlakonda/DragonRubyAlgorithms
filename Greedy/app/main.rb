@@ -507,11 +507,11 @@ class Greedy
       state.user_input = :greedy_remove_wall
     # If the mouse is over the first grid
     elsif bfs_mouse_over_grid?                 
-      # The user is adding a hill from the first grid
+      # The user is adding a wall from the first grid
       state.user_input = :bfs_add_wall
     # If the mouse is over the second grid
     elsif greedy_mouse_over_grid?                 
-      # The user is adding a hill from the second grid
+      # The user is adding a wall from the second grid
       state.user_input = :greedy_add_wall
     end
   end
@@ -674,9 +674,8 @@ class Greedy
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
     if bfs_mouse_over_grid? 
-      if grid.walls.has_key?(bfs_cell_closest_to_mouse) or state.hills.has_key?(bfs_cell_closest_to_mouse)
+      if grid.walls.has_key?(bfs_cell_closest_to_mouse)
         grid.walls.delete(bfs_cell_closest_to_mouse) 
-        state.hills.delete(bfs_cell_closest_to_mouse) 
         recalculate_searches 
       end
     end
@@ -688,40 +687,16 @@ class Greedy
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
     if greedy_mouse_over_grid? 
-      if grid.walls.has_key?(greedy_cell_closest_to_mouse) or state.hills.has_key?(bfs_cell_closest_to_mouse2)
+      if grid.walls.has_key?(greedy_cell_closest_to_mouse)
         grid.walls.delete(greedy_cell_closest_to_mouse) 
-        state.hills.delete(greedy_cell_closest_to_mouse) 
         recalculate_searches 
       end
     end
   end
-
-  # Adds a hill in the first grid in the cell the mouse is over
-  def input_add_hill
-    if bfs_mouse_over_grid? 
-      unless state.hills.has_key?(bfs_cell_closest_to_mouse)
-        state.hills[bfs_cell_closest_to_mouse] = true 
-        recalculate_searches 
-      end
-    end
-  end
-
-
-  # Adds a hill in the second grid in the cell the mouse is over
-  def input_add_hill2
-    if greedy_mouse_over_grid? 
-      unless state.hills.has_key?(greedy_cell_closest_to_mouse)
-        state.hills[greedy_cell_closest_to_mouse] = true 
-        recalculate_searches 
-      end
-    end
-  end
-
   # Adds a wall in the first grid in the cell the mouse is over
   def process_input_bfs_add_wall
     if bfs_mouse_over_grid? 
       unless grid.walls.has_key?(bfs_cell_closest_to_mouse)
-        state.hills.delete(bfs_cell_closest_to_mouse) 
         grid.walls[bfs_cell_closest_to_mouse] = true 
         recalculate_searches 
       end
@@ -732,7 +707,6 @@ class Greedy
   def process_input_greedy_add_wall
     if greedy_mouse_over_grid? 
       unless grid.walls.has_key?(greedy_cell_closest_to_mouse)
-        state.hills.delete(greedy_cell_closest_to_mouse) 
         grid.walls[greedy_cell_closest_to_mouse] = true 
         recalculate_searches 
       end
