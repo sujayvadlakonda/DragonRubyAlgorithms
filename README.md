@@ -28,6 +28,6 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 # Greedy
 ![](gifs/Greedy.gif)
 
-# Greedy_With_Walls
+# Greedy With Walls
 ![](gifs/Greedy_With_Walls.gif)
 
