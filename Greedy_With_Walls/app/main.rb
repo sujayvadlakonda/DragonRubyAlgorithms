@@ -1,11 +1,11 @@
 # This program is inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
+# The effectiveness of the Greedy search algorithm is shown through this demonstration.
+# Notice that both searches find the shortest path
+# The greedy search, however, explores less of the grid, and is therefore faster.
+# The greedy search prioritizes searching cells that are closer to the target.
+# Make sure to look at the Greedy with walls program to see some of the downsides of the greedy algorithm.
 
-# This time the greedy search still explored less of the grid, hence finishing faster.
-# However, it did not find the shortest path between the star and the target.
-
-# The only difference between this app and Greedy is the change of the starting position.
-
-class Greedy_With_Walls
+class Greedy
   attr_gtk
 
   def tick
@@ -31,7 +31,40 @@ class Greedy_With_Walls
 
     grid.star      ||= [0, 2]
     grid.target    ||= [14, 12]
-    grid.walls     ||= {}
+    grid.walls     ||= {
+      [2, 2] => true,
+      [3, 2] => true,
+      [4, 2] => true,
+      [5, 2] => true,
+      [6, 2] => true,
+      [7, 2] => true,
+      [8, 2] => true,
+      [9, 2] => true,
+      [10, 2] => true,
+      [11, 2] => true,
+      [12, 2] => true,
+      [12, 3] => true,
+      [12, 4] => true,
+      [12, 5] => true,
+      [12, 6] => true,
+      [12, 7] => true,
+      [12, 8] => true,
+      [12, 9] => true,
+      [12, 10] => true,
+      [12, 11] => true,
+      [12, 12] => true,
+      [2, 12] => true,
+      [3, 12] => true,
+      [4, 12] => true,
+      [5, 12] => true,
+      [6, 12] => true,
+      [7, 12] => true,
+      [8, 12] => true,
+      [9, 12] => true,
+      [10, 12] => true,
+      [11, 12] => true,
+      [12, 12] => true
+    }
     # There are no hills in the Greedy Search Demo
 
     # What the user is currently editing on the grid
@@ -426,7 +459,7 @@ class Greedy_With_Walls
 
   # Returns the rect for the path between two cells based on their relative positions
   def get_path_between(cell_one, cell_two)
-    path = nil
+    path = []
 
     # If cell one is above cell two
     if cell_one.x == cell_two.x and cell_one.y > cell_two.y
@@ -446,6 +479,9 @@ class Greedy_With_Walls
       path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
     end
 
+    if path == []
+      puts cell_one.to_s + " " + cell_two.to_s
+    end
     path
   end
 
@@ -969,12 +1005,12 @@ def tick args
   end
 
   # Every tick, new args are passed, and the Breadth First Search tick is called
-  $greedy_with_walls ||= Greedy_With_Walls.new(args)
-  $greedy_with_walls.args = args
-  $greedy_with_walls.tick
+  $greedy ||= Greedy.new(args)
+  $greedy.args = args
+  $greedy.tick
 end
 
 
 def reset
-  $greedy_with_walls = nil
+  $greedy = nil
 end
