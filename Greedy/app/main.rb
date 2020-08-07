@@ -441,7 +441,7 @@ class Greedy
       # Path starts from the center of cell two and moves rightward to the center of cell one
       path = [cell_two.x + 0.3, cell_two.y + 0.3, 1.4, 0.4]
     # If cell one is to the right of cell two
-    elsif cell_one.x > cell_two.x and cell_one.y == cell_two.y
+    elsif cell_one.x < cell_two.x and cell_one.y == cell_two.y
       # Path starts from the center of cell one and moves rightward to the center of cell two
       path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
     end
