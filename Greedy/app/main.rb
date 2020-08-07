@@ -1,3 +1,10 @@
+# This program is inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
+# The effectiveness of the Greedy search algorithm is shown through this demonstration.
+# Notice that both searches find the shortest path
+# The greedy search, however, explores less of the grid, and is therefore faster.
+# The greedy search prioritizes searching cells that are closer to the target.
+# Make sure to look at the Greedy with walls program to see some of the downsides of the greedy algorithm.
+
 class Greedy
   attr_gtk
 
@@ -39,6 +46,8 @@ class Greedy
     # and to trace a path from the target back to the starting point.
     # Frontier is an array of cells to expand the search from.
     # The search is over when there are no more cells to search from.
+    # Path stores the path from the target to the star, once the target has been found
+    # It prevents calculating the path every tick.
     bfs.came_from  ||= {}
     bfs.frontier   ||= []
     bfs.path       ||= []
@@ -47,18 +56,15 @@ class Greedy
     greedy.frontier  ||= []
     greedy.path      ||= []
 
-    # Values that are used for the breadth first search
-    # Keeping track of what cells were visited prevents counting cells multiple times
-    # The cells from which the breadth first search will expand
-    # Keeps track of which cell all cells were searched from
-    # Used to recreate the path from the target to the star
-
-
     # Stores which step of the animation is being rendered
     # When the user moves the star or messes with the walls,
-    # the breadth first search is recalculated up to this step
+    # the searches are recalculated up to this step
+
+    # Unless the current step has a value
     unless state.current_step
-      state.current_step = 10
+      # Set the current step to 10
+      state.current_step = 10 
+      # And calculate the searches up to step 10
       recalculate_searches
     end
 
@@ -77,13 +83,6 @@ class Greedy
     if state.play == nil
       state.play = false
     end
-
-    # What the user is currently editing on the grid
-    # Possible values are: :none, :slider, :star, :remove_wall, :add_wall
-
-    # We store this value, because we want to remember the value even when
-    # the user's cursor is no longer over what they're interacting with, but
-    # they are still clicking down on the mouse.
 
     # Store the rects of the buttons that control the animation
     # They are here for user customization
@@ -113,7 +112,7 @@ class Greedy
   end
 
   # All methods with render draw stuff on the screen
-  # Common elements has grids and gridlines, and also the star, target, and walls on both grids.
+  # UI has buttons, the slider, and labels
   # The search specific rendering occurs in the respective methods
   def render
     render_ui
@@ -216,118 +215,125 @@ class Greedy
   end
 
   def render_bfs_grid
+    # A large rect the size of the grid
     outputs.solids << [bfs_scale_up(grid.rect), unvisited_color]
 
+    # The vertical grid lines
     for x in 0..grid.width
       outputs.lines << bfs_vertical_line(x)
     end
 
+    # The horizontal grid lines
     for y in 0..grid.height
       outputs.lines << bfs_horizontal_line(y) 
     end
   end
 
   def render_greedy_grid
+    # A large rect the size of the grid
     outputs.solids << [greedy_scale_up(grid.rect), unvisited_color]
 
+    # The vertical grid lines
     for x in 0..grid.width
       outputs.lines << greedy_vertical_line(x)
     end
 
+    # The horizontal grid lines
     for y in 0..grid.height
       outputs.lines << greedy_horizontal_line(y) 
     end
   end
     
+  # Returns a vertical line for a column of the first grid
   def bfs_vertical_line column
     bfs_scale_up([column, 0, column, grid.height])
   end
 
+  # Returns a horizontal line for a column of the first grid
   def bfs_horizontal_line row
     bfs_scale_up([0, row, grid.width, row])
   end
 
+  # Returns a vertical line for a column of the second grid
   def greedy_vertical_line column
     bfs_scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
   end
 
+  # Returns a horizontal line for a column of the second grid
   def greedy_horizontal_line row
     bfs_scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
   end
 
+  # Renders the star on the first grid
   def render_bfs_star
     outputs.sprites << [bfs_scale_up(grid.star), 'star.png']
   end
 
+  # Renders the star on the second grid
   def render_greedy_star
     outputs.sprites << [greedy_scale_up(grid.star), 'star.png']
   end
 
+  # Renders the target on the first grid
   def render_bfs_target
     outputs.sprites << [bfs_scale_up(grid.target), 'target.png']
   end
-
+  
+  # Renders the target on the second grid
   def render_greedy_target
     outputs.sprites << [greedy_scale_up(grid.target), 'target.png']
   end
 
+  # Renders the walls on the first grid
   def render_bfs_walls
     grid.walls.each_key do | wall | 
       outputs.solids << [bfs_scale_up(wall), wall_color]
     end
   end
 
+  # Renders the walls on the second grid
   def render_greedy_walls
     grid.walls.each_key do | wall | 
       outputs.solids << [greedy_scale_up(wall), wall_color]
     end
   end
 
+  # Renders the visited cells on the first grid
   def render_bfs_visited
     bfs.came_from.each_key do | visited_cell |
       outputs.solids << [bfs_scale_up(visited_cell), visited_color]
     end
   end
 
+  # Renders the visited cells on the second grid
   def render_greedy_visited
     greedy.came_from.each_key do | visited_cell |
       outputs.solids << [greedy_scale_up(visited_cell), visited_color]
     end
   end
 
+  # Renders the frontier cells on the first grid
   def render_bfs_frontier
     bfs.frontier.each do | frontier_cell | 
       outputs.solids << [bfs_scale_up(frontier_cell), frontier_color, 200]
     end
   end
 
+  # Renders the frontier cells on the second grid
   def render_greedy_frontier
     greedy.frontier.each do | frontier_cell | 
       outputs.solids << [greedy_scale_up(frontier_cell), frontier_color, 200]
     end
   end
 
-  # ALWAYS HAS TO CALC PATH, CHANGE THAT
+  # Renders the path found by the breadth first search on the first grid
   def render_bfs_path
     bfs.path.each do | path |
       outputs.solids << [bfs_scale_up(path), path_color]
     end
-    # return unless bfs.came_from.has_key?(grid.target)
-    # # Start from the target
-    # endpoint = grid.target
-    # # And the cell it came from
-    # next_endpoint = bfs.came_from[endpoint]
-    # while endpoint and next_endpoint
-    #   # Draw a path between these two cells
-    #   path = get_path_between(endpoint, next_endpoint)
-    #   outputs.solids << [bfs_scale_up(path), path_color]
-    #   # And get the next pair of cells
-    #   endpoint = next_endpoint
-    #   next_endpoint = bfs.came_from[endpoint]
-    #   # Continue till there are no more cells
-    # end
   end
 
+  # Renders the path found by the greedy search on the second grid
   def render_greedy_path
     return unless greedy.came_from.has_key?(grid.target)
     # Start from the target
@@ -345,6 +351,7 @@ class Greedy
     end
   end
 
+  # Returns the rect for the path between two cells based on their relative positions
   def get_path_between(cell_one, cell_two)
     path = nil
     if cell_one.x == cell_two.x
@@ -362,11 +369,13 @@ class Greedy
     end
     path
   end
+
   # In code, the cells are represented as 1x1 rectangles
   # When drawn, the cells are larger than 1x1 rectangles
   # This method is used to scale up cells, and lines
   # Objects are scaled up according to the grid.cell_size variable
   # This allows for easy customization of the visual scale of the grid
+  # This method scales up cells for the first grid
   def bfs_scale_up(cell)
     # Prevents the original value of cell from being edited
     cell = cell.clone
@@ -384,16 +393,21 @@ class Greedy
     # Returns the scaled up cell
     cell
   end
+
   # Translates the given cell grid.width + 1 to the right and then scales up
   # Used to draw cells for the second grid
   # This method does not work for lines,
   # so separate methods exist for the grid lines
   def greedy_scale_up(cell)
+    # Prevents the original value of cell from being edited
     cell = cell.clone
+    # Translates the cell to the second grid equivalent
     cell.x += grid.width + 1
+    # Proceeds as if scaling up for the first grid
     bfs_scale_up(cell)
   end
 
+  # This method handles user input every tick
   def input
     # If the mouse was lifted this tick
     if inputs.mouse.up
@@ -413,6 +427,8 @@ class Greedy
     process_input
   end
 
+  # Checks and handles input for the buttons
+  # Called when the mouse is lifted
   def input_buttons
     input_left_button 
     input_center_button          
@@ -460,6 +476,8 @@ class Greedy
     inputs.mouse.point.inside_rect?(buttons.right)
   end
 
+  # Determines what the user is editing
+  # This method is called when the mouse is clicked down
   def determine_input
     if mouse_over_slider?
       state.user_input = :slider
@@ -795,23 +813,28 @@ class Greedy
       end
     end
 
+    # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
+    # Comment this line and let a path generate to see the difference
     bfs.frontier = bfs.frontier.sort_by {| cell | proximity_to_star(cell) }
 
+    # If the search found the target
     if bfs.came_from.has_key?(grid.target)
+      # Calculate the path between the target and star
       bfs_calc_path
     end
   end
 
+  # Calculates the path between the target and star for the breadth first search
+  # Only called when the breadth first search finds the star
   def bfs_calc_path
     # Start from the target
     endpoint = grid.target
     # And the cell it came from
     next_endpoint = bfs.came_from[endpoint]
     while endpoint and next_endpoint
-      # Draw a path between these two cells
+      # Draw a path between these two cells and store it
       path = get_path_between(endpoint, next_endpoint)
       bfs.path << path
-      # outputs.solids << [bfs_scale_up(path), path_color]
       # And get the next pair of cells
       endpoint = next_endpoint
       next_endpoint = bfs.came_from[endpoint]
@@ -819,15 +842,25 @@ class Greedy
     end
   end
 
+  # Moves the greedy search forward one step
+  # Can be called from tick while the animation is playing
+  # Can also be called when recalculating the searches after the user edited the grid
   def greedy_one_step_forward
+    # Stop the search if the target has been found
     return if greedy.came_from.has_key?(grid.target)
 
+    # If the search has not begun
     if greedy.came_from.empty?
+      # Setup the search to begin from the star
       greedy.frontier << grid.star
       greedy.came_from[grid.star] = nil
     end
 
+    # One step in the greedy search
+
+    # Unless there are no more cells to explore from
     unless greedy.frontier.empty?
+      # Get the next cell to explore from
       new_frontier = greedy.frontier.shift
       # For each of its neighbors
       adjacent_neighbors(new_frontier).each do |neighbor| 
@@ -840,15 +873,18 @@ class Greedy
       end
     end
 
+    # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
     greedy.frontier = greedy.frontier.sort_by {| cell | proximity_to_star(cell) }
+    # Sort the frontier so cells that are close to the target are then prioritized
     greedy.frontier = greedy.frontier.sort_by {| cell | greedy_heuristic(cell)  }
   end
 
+  # Returns one-dimensional absolute distance between cell and target
+  # Returns a number to compare distances between cells and the target
   def greedy_heuristic(current_cell)
     (grid.target.x - current_cell.x).abs + (grid.target.y - current_cell.y).abs
   end
 
-  # THE PROXIMITY THING MIGHT BE UNNECESSARY
   # Returns a list of adjacent cells
   # Used to determine what the next cells to be added to the frontier are
   def adjacent_neighbors(cell)
@@ -860,11 +896,6 @@ class Greedy
     neighbors << [cell.x - 1, cell.y    ] unless cell.x == 0 
     neighbors << [cell.x    , cell.y + 1] unless cell.y == grid.height - 1 
     neighbors << [cell.x + 1, cell.y    ] unless cell.x == grid.width - 1 
-
-    # Sorts the neighbors so the rendered path is a zigzag path
-    # Cells in a diagonal direction are given priority
-    # Comment this line to see the difference
-    # neighbors = neighbors.sort_by { |neighbor_x, neighbor_y|  proximity_to_star(neighbor_x, neighbor_y) }
 
     neighbors 
   end
