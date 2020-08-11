@@ -1,9 +1,12 @@
 # This program is inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
+
 # The effectiveness of the Greedy search algorithm is shown through this demonstration.
 # Notice that both searches find the shortest path
 # The greedy search, however, explores less of the grid, and is therefore faster.
 # The greedy search prioritizes searching cells that are closer to the target.
 # Make sure to look at the Greedy with walls program to see some of the downsides of the greedy algorithm.
+
+# REPLACE reset_searches W CALC_searches
 
 class A_Star
   attr_gtk
@@ -12,12 +15,9 @@ class A_Star
     defaults
     render 
     input  
-    # If animation is playing, and max steps have not been reached
-    # Move the search a step forward
-    if state.play && state.current_step < state.max_steps
-      # Variable that tells the program what step to recalculate up to
-      state.current_step += 1 
-      move_searches_one_step_forward
+
+    if bfs.came_from.empty?
+      calc_searches
     end
   end
 
@@ -26,11 +26,11 @@ class A_Star
     # Freely customizable to user's liking
     grid.width     ||= 15
     grid.height    ||= 15
-    grid.cell_size ||= 40
+    grid.cell_size ||= 27
     grid.rect      ||= [0, 0, grid.width, grid.height]
 
     grid.star      ||= [0, 2]
-    grid.target    ||= [14, 12]
+    grid.target    ||= [10, 13]
     grid.walls     ||= {
       [2, 2] => true,
       [3, 2] => true,
@@ -53,9 +53,6 @@ class A_Star
       [12, 10] => true,
       [12, 11] => true,
       [12, 12] => true,
-      [2, 12] => true,
-      [3, 12] => true,
-      [4, 12] => true,
       [5, 12] => true,
       [6, 12] => true,
       [7, 12] => true,
@@ -65,7 +62,6 @@ class A_Star
       [11, 12] => true,
       [12, 12] => true
     }
-    # There are no hills in the Greedy Search Demo
 
     # What the user is currently editing on the grid
     # We store this value, because we want to remember the value even when
@@ -89,17 +85,9 @@ class A_Star
     greedy.frontier  ||= []
     greedy.path      ||= []
 
-    # Stores which step of the animation is being rendered
-    # When the user moves the star or messes with the walls,
-    # the searches are recalculated up to this step
-
-    # Unless the current step has a value
-    unless state.current_step
-      # Set the current step to 10
-      state.current_step = 10 
-      # And calculate the searches up to step 10
-      recalculate_searches
-    end
+    a_star.came_from ||= {}
+    a_star.frontier  ||= []
+    a_star.path      ||= []
 
     # At some step the animation will end,
     # and further steps won't change anything (the whole grid will be explored)
@@ -108,40 +96,6 @@ class A_Star
     # and the slider will be at the end
     state.max_steps = grid.width * grid.height 
 
-    # Whether the animation should play or not
-    # If true, every tick moves anim_steps forward one
-    # Pressing the stepwise animation buttons will pause the animation
-    # An if statement instead of the ||= operator is used for assigning a boolean value.
-    # The || operator does not differentiate between nil and false.
-    if state.play == nil
-      state.play = false
-    end
-
-    # Store the rects of the buttons that control the animation
-    # They are here for user customization
-    # Editing these might require recentering the text inside them
-    # Those values can be found in the render_button methods
-    buttons.left   = [470, 600, 50, 50]
-    buttons.center = [520, 600, 200, 50]
-    buttons.right  = [720, 600, 50, 50]
-
-    # The variables below are related to the slider
-    # They allow the user to customize them
-    # They also give a central location for the render and input methods to get
-    # information from
-    # x & y are the coordinates of the leftmost part of the slider line
-    slider.x = 440
-    slider.y = 675
-    # This is the width of the line
-    slider.w = 360
-    # This is the offset for the circle
-    # Allows the center of the circle to be on the line,
-    # as opposed to the upper right corner
-    slider.offset = 20
-    # This is the spacing between each of the notches on the slider
-    # Notches are places where the circle can rest on the slider line
-    # There needs to be a notch for each step before the maximum number of steps
-    slider.spacing = slider.w.to_f / state.max_steps.to_f
   end
 
   # All methods with render draw stuff on the screen
@@ -154,15 +108,7 @@ class A_Star
   end
 
   def render_ui
-    render_buttons
-    render_slider
     render_labels
-  end
-
-  def render_buttons
-    render_left_button
-    render_center_button
-    render_right_button
   end
 
   def render_bfs
@@ -171,7 +117,7 @@ class A_Star
     render_bfs_target
     render_bfs_visited
     render_bfs_walls
-    render_bfs_frontier
+    # render_bfs_frontier
     render_bfs_path
   end
 
@@ -181,15 +127,12 @@ class A_Star
     render_greedy_target
     render_greedy_visited
     render_greedy_walls
-    render_greedy_frontier
+    # render_greedy_frontier
     render_greedy_path
   end
 
   # This method handles user input every tick
   def input
-    # Check and handle button input
-    input_buttons
-
     # If the mouse was lifted this tick
     if inputs.mouse.up
       # Set current input to none
@@ -209,10 +152,8 @@ class A_Star
   # Determines what the user is editing
   # This method is called when the mouse is clicked down
   def determine_input
-    if mouse_over_slider?
-      state.user_input = :slider
     # If the mouse is over the star in the first grid
-    elsif bfs_mouse_over_star?                 
+    if bfs_mouse_over_star?                 
       # The user is editing the star from the first grid
       state.user_input = :bfs_star          
     # If the mouse is over the star in the second grid
@@ -248,9 +189,7 @@ class A_Star
 
   # Processes click and drag based on what the user is currently dragging
   def process_input
-    if state.user_input == :slider
-      process_input_slider
-    elsif state.user_input == :bfs_star         
+    if state.user_input == :bfs_star         
       process_input_bfs_star                            
     elsif state.user_input == :greedy_star
       process_input_greedy_star                            
@@ -269,66 +208,9 @@ class A_Star
     end
   end
 
-  def render_slider
-    # Using primitives hides the line under the white circle of the slider
-    # Draws the line
-    outputs.primitives << [slider.x, slider.y, slider.x + slider.w, slider.y].line
-    # The circle needs to be offset so that the center of the circle
-    # overlaps the line instead of the upper right corner of the circle
-    # The circle's x value is also moved based on the current seach step
-    circle_x = (slider.x - slider.offset) + (state.current_step * slider.spacing)
-    circle_y = (slider.y - slider.offset)
-    circle_rect = [circle_x, circle_y, 37, 37]
-    outputs.primitives << [circle_rect, 'circle-white.png'].sprite
-  end
-
   def render_labels
     outputs.labels << [205, 625, "Breadth First Search"]
     outputs.labels << [820, 625, "Greedy Best-First Search"]
-  end
-
-  def render_left_button
-    # Draws the button_color button, and a black border
-    # The border separates the buttons visually
-    outputs.solids  << [buttons.left, button_color]
-    outputs.borders << [buttons.left]
-
-    # Renders an explanatory label in the center of the button
-    # Explains to the user what the button does
-    # If the button size is changed, the label might need to be edited as well
-    # to keep the label in the center of the button
-    label_x = buttons.left.x + 20
-    label_y = buttons.left.y + 35
-    outputs.labels  << [label_x, label_y, "<"]
-  end
-
-  def render_center_button
-    # Draws the button_color button, and a black border
-    # The border separates the buttons visually
-    outputs.solids  << [buttons.center, button_color]
-    outputs.borders << [buttons.center]
-
-    # Renders an explanatory label in the center of the button
-    # Explains to the user what the button does
-    # If the button size is changed, the label might need to be edited as well
-    # to keep the label in the center of the button
-    label_x    = buttons.center.x + 37
-    label_y    = buttons.center.y + 35
-    label_text = state.play ? "Pause Animation" : "Play Animation"
-    outputs.labels << [label_x, label_y, label_text]
-  end
-
-  def render_right_button
-    # Draws the button_color button, and a black border
-    # The border separates the buttons visually
-    outputs.solids  << [buttons.right, button_color]
-    outputs.borders << [buttons.right]
-
-    # Renders an explanatory label in the center of the button
-    # Explains to the user what the button does
-    label_x = buttons.right.x + 20
-    label_y = buttons.right.y + 35
-    outputs.labels  << [label_x, label_y, ">"]
   end
 
   def render_bfs_grid
@@ -479,9 +361,6 @@ class A_Star
       path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
     end
 
-    if path == []
-      puts cell_one.to_s + " " + cell_two.to_s
-    end
     path
   end
 
@@ -520,65 +399,6 @@ class A_Star
     cell.x += grid.width + 1
     # Proceeds as if scaling up for the first grid
     bfs_scale_up(cell)
-  end
-
-  # Checks and handles input for the buttons
-  # Called when the mouse is lifted
-  def input_buttons
-    input_left_button 
-    input_center_button          
-    input_right_button     
-  end
-
-  # Checks if the previous step button is clicked
-  # If it is, it pauses the animation and moves the search one step backward
-  def input_left_button 
-    if left_button_clicked?
-      state.play = false
-      state.current_step -= 1
-      recalculate_searches
-    end
-  end
-
-  # Controls the play/pause button
-  # Inverses whether the animation is playing or not when clicked
-  def input_center_button
-    if center_button_clicked? || inputs.keyboard.key_down.space
-      state.play = !state.play         
-    end
-  end
-
-  # Checks if the next step button is clicked
-  # If it is, it pauses the animation and moves the search one step forward
-  def input_right_button
-    if right_button_clicked?
-      state.play = false              
-      state.current_step += 1           
-      move_searches_one_step_forward
-    end
-  end
-
-  # These methods detect when the buttons are clicked
-  def left_button_clicked?
-    inputs.mouse.point.inside_rect?(buttons.left) && inputs.mouse.up
-  end
-
-  def center_button_clicked?
-    inputs.mouse.point.inside_rect?(buttons.center) && inputs.mouse.up
-  end
-
-  def right_button_clicked?
-    inputs.mouse.point.inside_rect?(buttons.right) && inputs.mouse.up
-  end
-
-
-  # Signal that the user is going to be moving the slider
-  # Is the mouse over the circle of the slider?
-  def mouse_over_slider?
-    circle_x = (slider.x - slider.offset) + (state.current_step * slider.spacing)
-    circle_y = (slider.y - slider.offset)
-    circle_rect = [circle_x, circle_y, 37, 37]
-    inputs.mouse.point.inside_rect?(circle_rect)
   end
 
   # Signal that the user is going to be moving the star from the first grid
@@ -629,25 +449,6 @@ class A_Star
     inputs.mouse.point.inside_rect?(greedy_scale_up(grid.rect))
   end
 
-  # This method is called when the user is editing the slider
-  # It pauses the animation and moves the white circle to the closest integer point
-  # on the slider
-  # Changes the step of the search to be animated
-  def process_input_slider
-    state.play = false 
-    mouse_x = inputs.mouse.point.x
-
-    # Bounds the mouse_x to the closest x value on the slider line
-    mouse_x = slider.x if mouse_x < slider.x 
-    mouse_x = slider.x + slider.w if mouse_x > slider.x + slider.w 
-
-    # Sets the current search step to the one represented by the mouse x value
-    # The slider's circle moves due to the render_slider method using anim_steps
-    state.current_step = ((mouse_x - slider.x) / slider.spacing).to_i
-
-    recalculate_searches
-  end
-
   # Moves the star to the cell closest to the mouse in the first grid
   # Only resets the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
@@ -657,7 +458,7 @@ class A_Star
       grid.star = bfs_cell_closest_to_mouse 
     end
     unless old_star == grid.star 
-      recalculate_searches 
+      reset_searches 
     end
   end
 
@@ -670,12 +471,12 @@ class A_Star
       grid.star = greedy_cell_closest_to_mouse
     end
     unless old_star == grid.star 
-      recalculate_searches 
+      reset_searches 
     end
   end
 
   # Moves the target to the grid closest to the mouse in the first grid
-  # Only recalculate_searchess the search if the target changes position
+  # Only reset_searchess the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def process_input_bfs_target
     old_target = grid.target.clone 
@@ -683,12 +484,12 @@ class A_Star
       grid.target = bfs_cell_closest_to_mouse
     end
     unless old_target == grid.target 
-      recalculate_searches 
+      reset_searches 
     end
   end
 
   # Moves the target to the cell closest to the mouse in the second grid
-  # Only recalculate_searchess the search if the target changes position
+  # Only reset_searchess the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
   def process_input_greedy_target
     old_target = grid.target.clone 
@@ -696,7 +497,7 @@ class A_Star
       grid.target = greedy_cell_closest_to_mouse
     end
     unless old_target == grid.target 
-      recalculate_searches 
+      reset_searches 
     end
   end
 
@@ -708,7 +509,7 @@ class A_Star
     if bfs_mouse_over_grid? 
       if grid.walls.has_key?(bfs_cell_closest_to_mouse)
         grid.walls.delete(bfs_cell_closest_to_mouse) 
-        recalculate_searches 
+        reset_searches 
       end
     end
   end
@@ -721,7 +522,7 @@ class A_Star
     if greedy_mouse_over_grid? 
       if grid.walls.has_key?(greedy_cell_closest_to_mouse)
         grid.walls.delete(greedy_cell_closest_to_mouse) 
-        recalculate_searches 
+        reset_searches 
       end
     end
   end
@@ -730,7 +531,7 @@ class A_Star
     if bfs_mouse_over_grid? 
       unless grid.walls.has_key?(bfs_cell_closest_to_mouse)
         grid.walls[bfs_cell_closest_to_mouse] = true 
-        recalculate_searches 
+        reset_searches 
       end
     end
   end
@@ -740,7 +541,7 @@ class A_Star
     if greedy_mouse_over_grid? 
       unless grid.walls.has_key?(greedy_cell_closest_to_mouse)
         grid.walls[greedy_cell_closest_to_mouse] = true 
-        recalculate_searches 
+        reset_searches 
       end
     end
   end
@@ -777,7 +578,7 @@ class A_Star
     [x, y] 
   end
 
-  def recalculate_searches
+  def reset_searches
     # Reset the searches
     bfs.came_from    = {}
     bfs.frontier     = []
@@ -785,49 +586,84 @@ class A_Star
     greedy.came_from = {}
     greedy.frontier  = []
     greedy.path      = []
+    # a_star.came_from = {}
+    # a_star.frontier  = []
+    # a_star.path      = []
+  end
 
+  def calc_searches
+    calc_bfs
+    calc_greedy
+    calc_a_star
     # Move the searches forward to the current step
     state.current_step.times { move_searches_one_step_forward }
   end
 
-  def move_searches_one_step_forward
-    bfs_one_step_forward
-    greedy_one_step_forward
-  end
+  def calc_bfs
+    # Sets up the search to begin from the star
+    bfs.frontier << grid.star                   
+    bfs.came_from[grid.star] = nil              
 
-  def bfs_one_step_forward
-    return if bfs.came_from.has_key?(grid.target)
-
-    # Only runs at the beginning of the search as setup.
-    if bfs.came_from.empty?  
-      bfs.frontier << grid.star                   
-      bfs.came_from[grid.star] = nil              
-    end
-
-    # A step in the search
-    unless bfs.frontier.empty? 
-      # Takes the next frontier cell
+    # Until the target is found or there are no more cells to explore from
+    until bfs.came_from.has_key?(grid.target) or bfs.frontier.empty?
+      # Take the next frontier cell
       new_frontier = bfs.frontier.shift 
       # For each of its neighbors
-      adjacent_neighbors(new_frontier).each do |neighbor| 
+      adjacent_neighbors(new_frontier).each do | neighbor | 
         # That have not been visited and are not walls
-        unless bfs.came_from.has_key?(neighbor) || grid.walls.has_key?(neighbor) 
+        unless bfs.came_from.has_key?(neighbor) or grid.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited
           bfs.frontier << neighbor 
           bfs.came_from[neighbor] = new_frontier 
         end
       end
+      # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
+      # Comment this line and let a path generate to see the difference
+      bfs.frontier = bfs.frontier.sort_by {| cell | proximity_to_star(cell) }
     end
 
-    # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
-    # Comment this line and let a path generate to see the difference
-    bfs.frontier = bfs.frontier.sort_by {| cell | proximity_to_star(cell) }
 
     # If the search found the target
     if bfs.came_from.has_key?(grid.target)
       # Calculate the path between the target and star
       bfs_calc_path
     end
+  end
+
+  def calc_greedy
+    # Sets up the search to begin from the star
+    greedy.frontier << grid.star                   
+    greedy.came_from[grid.star] = nil              
+
+    # Until the target is found or there are no more cells to explore from
+    until greedy.came_from.has_key?(grid.target) or greedy.frontier.empty?
+      # Take the next frontier cell
+      new_frontier = greedy.frontier.shift 
+      # For each of its neighbors
+      adjacent_neighbors(new_frontier).each do | neighbor | 
+        # That have not been visited and are not walls
+        unless greedy.came_from.has_key?(neighbor) or grid.walls.has_key?(neighbor) 
+          # Add them to the frontier and mark them as visited
+          greedy.frontier << neighbor 
+          greedy.came_from[neighbor] = new_frontier 
+        end
+      end
+      # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
+      # Comment this line and let a path generate to see the difference
+      greedy.frontier = greedy.frontier.sort_by {| cell | proximity_to_star(cell) }
+      # Sort the frontier so cells that are close to the target are then prioritized
+      greedy.frontier = greedy.frontier.sort_by {| cell | greedy_heuristic(cell)  }
+    end
+
+
+    # If the search found the target
+    if greedy.came_from.has_key?(grid.target)
+      # Calculate the path between the target and star
+      greedy_calc_path
+    end
+  end
+
+  def calc_a_star
   end
 
   # Calculates the path between the target and star for the breadth first search
@@ -845,49 +681,6 @@ class A_Star
       endpoint = next_endpoint
       next_endpoint = bfs.came_from[endpoint]
       # Continue till there are no more cells
-    end
-  end
-
-  # Moves the greedy search forward one step
-  # Can be called from tick while the animation is playing
-  # Can also be called when recalculating the searches after the user edited the grid
-  def greedy_one_step_forward
-    # Stop the search if the target has been found
-    return if greedy.came_from.has_key?(grid.target)
-
-    # If the search has not begun
-    if greedy.came_from.empty?
-      # Setup the search to begin from the star
-      greedy.frontier << grid.star
-      greedy.came_from[grid.star] = nil
-    end
-
-    # One step in the greedy search
-
-    # Unless there are no more cells to explore from
-    unless greedy.frontier.empty?
-      # Get the next cell to explore from
-      new_frontier = greedy.frontier.shift
-      # For each of its neighbors
-      adjacent_neighbors(new_frontier).each do |neighbor| 
-        # That have not been visited and are not walls
-        unless greedy.came_from.has_key?(neighbor) || grid.walls.has_key?(neighbor) 
-          # Add them to the frontier and mark them as visited
-          greedy.frontier << neighbor 
-          greedy.came_from[neighbor] = new_frontier 
-        end
-      end
-    end
-
-    # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
-    greedy.frontier = greedy.frontier.sort_by {| cell | proximity_to_star(cell) }
-    # Sort the frontier so cells that are close to the target are then prioritized
-    greedy.frontier = greedy.frontier.sort_by {| cell | greedy_heuristic(cell)  }
-
-    # If the search found the target
-    if greedy.came_from.has_key?(grid.target)
-      # Calculate the path between the target and star
-      greedy_calc_path
     end
   end
 
@@ -952,20 +745,16 @@ class A_Star
     state.grid
   end
 
-  def buttons
-    state.buttons
-  end
-
-  def slider
-    state.slider
-  end
-
   def bfs
     state.bfs
   end
 
   def greedy
     state.greedy
+  end
+
+  def a_star
+    state.a_star
   end
 
   # Descriptive aliases for colors
@@ -980,10 +769,6 @@ class A_Star
   def visited_color
     [204, 191, 179] # Dark Brown
   end
-
-  def frontier_color
-    [103, 136, 204] # Blue
-  end
   
   def path_color
     [231, 230, 228] # Pastel White
@@ -993,6 +778,8 @@ class A_Star
     [190, 190, 190] # Gray
   end
 end
+
+
 # Method that is called by DragonRuby periodically
 # Used for updating animations and calculations
 def tick args
