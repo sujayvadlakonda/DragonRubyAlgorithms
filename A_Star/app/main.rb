@@ -16,7 +16,7 @@ class A_Star
     render 
     input  
 
-    if bfs.came_from.empty?
+    if dijkstra.came_from.empty?
       calc_searches
     end
   end
@@ -30,7 +30,7 @@ class A_Star
     grid.rect      ||= [0, 0, grid.width, grid.height]
 
     grid.star      ||= [0, 2]
-    grid.target    ||= [10, 13]
+    grid.target    ||= [11, 13]
     grid.walls     ||= {
       [2, 2] => true,
       [3, 2] => true,
@@ -77,9 +77,10 @@ class A_Star
     # The search is over when there are no more cells to search from.
     # Path stores the path from the target to the star, once the target has been found
     # It prevents calculating the path every tick.
-    bfs.came_from  ||= {}
-    bfs.frontier   ||= []
-    bfs.path       ||= []
+    dijkstra.came_from   ||= {}
+    dijkstra.cost_so_far ||= {}
+    dijkstra.frontier    ||= []
+    dijkstra.path        ||= []
 
     greedy.came_from ||= {}
     greedy.frontier  ||= []
@@ -103,7 +104,7 @@ class A_Star
   # The search specific rendering occurs in the respective methods
   def render
     render_ui
-    render_bfs
+    render_dijkstra
     render_greedy
   end
 
@@ -111,14 +112,14 @@ class A_Star
     render_labels
   end
 
-  def render_bfs
-    render_bfs_grid
-    render_bfs_star
-    render_bfs_target
-    render_bfs_visited
-    render_bfs_walls
-    # render_bfs_frontier
-    render_bfs_path
+  def render_dijkstra
+    render_dijkstra_grid
+    render_dijkstra_star
+    render_dijkstra_target
+    render_dijkstra_visited
+    render_dijkstra_walls
+    # render_dijkstra_frontier
+    render_dijkstra_path
   end
 
   def render_greedy
@@ -153,33 +154,33 @@ class A_Star
   # This method is called when the mouse is clicked down
   def determine_input
     # If the mouse is over the star in the first grid
-    if bfs_mouse_over_star?                 
+    if dijkstra_mouse_over_star?                 
       # The user is editing the star from the first grid
-      state.user_input = :bfs_star          
+      state.user_input = :dijkstra_star          
     # If the mouse is over the star in the second grid
     elsif greedy_mouse_over_star?                 
       # The user is editing the star from the second grid
       state.user_input = :greedy_star          
     # If the mouse is over the target in the first grid
-    elsif bfs_mouse_over_target?                 
+    elsif dijkstra_mouse_over_target?                 
       # The user is editing the target from the first grid
-      state.user_input = :bfs_target          
+      state.user_input = :dijkstra_target          
     # If the mouse is over the target in the second grid
     elsif greedy_mouse_over_target?                 
       # The user is editing the target from the second grid
       state.user_input = :greedy_target 
     # If the mouse is over a wall in the first grid
-    elsif bfs_mouse_over_wall?                 
+    elsif dijkstra_mouse_over_wall?                 
       # The user is removing a wall from the first grid
-      state.user_input = :bfs_remove_wall   
+      state.user_input = :dijkstra_remove_wall   
     # If the mouse is over a wall in the second grid
     elsif greedy_mouse_over_wall?                 
       # The user is removing a wall from the second grid
       state.user_input = :greedy_remove_wall
     # If the mouse is over the first grid
-    elsif bfs_mouse_over_grid?                 
+    elsif dijkstra_mouse_over_grid?                 
       # The user is adding a wall from the first grid
-      state.user_input = :bfs_add_wall
+      state.user_input = :dijkstra_add_wall
     # If the mouse is over the second grid
     elsif greedy_mouse_over_grid?                 
       # The user is adding a wall from the second grid
@@ -189,20 +190,20 @@ class A_Star
 
   # Processes click and drag based on what the user is currently dragging
   def process_input
-    if state.user_input == :bfs_star         
-      process_input_bfs_star                            
+    if state.user_input == :dijkstra_star         
+      process_input_dijkstra_star                            
     elsif state.user_input == :greedy_star
       process_input_greedy_star                            
-    elsif state.user_input == :bfs_target         
-      process_input_bfs_target                            
+    elsif state.user_input == :dijkstra_target         
+      process_input_dijkstra_target                            
     elsif state.user_input == :greedy_target         
       process_input_greedy_target                            
-    elsif state.user_input == :bfs_remove_wall  
-      process_input_bfs_remove_wall                     
+    elsif state.user_input == :dijkstra_remove_wall  
+      process_input_dijkstra_remove_wall                     
     elsif state.user_input == :greedy_remove_wall
       process_input_greedy_remove_wall                     
-    elsif state.user_input == :bfs_add_wall     
-      process_input_bfs_add_wall                        
+    elsif state.user_input == :dijkstra_add_wall     
+      process_input_dijkstra_add_wall                        
     elsif state.user_input == :greedy_add_wall     
       process_input_greedy_add_wall                        
     end
@@ -213,18 +214,18 @@ class A_Star
     outputs.labels << [820, 625, "Greedy Best-First Search"]
   end
 
-  def render_bfs_grid
+  def render_dijkstra_grid
     # A large rect the size of the grid
-    outputs.solids << [bfs_scale_up(grid.rect), default_color]
+    outputs.solids << [dijkstra_scale_up(grid.rect), default_color]
 
     # The vertical grid lines
     for x in 0..grid.width
-      outputs.lines << bfs_vertical_line(x)
+      outputs.lines << dijkstra_vertical_line(x)
     end
 
     # The horizontal grid lines
     for y in 0..grid.height
-      outputs.lines << bfs_horizontal_line(y) 
+      outputs.lines << dijkstra_horizontal_line(y) 
     end
   end
 
@@ -244,28 +245,28 @@ class A_Star
   end
     
   # Returns a vertical line for a column of the first grid
-  def bfs_vertical_line column
-    bfs_scale_up([column, 0, column, grid.height])
+  def dijkstra_vertical_line column
+    dijkstra_scale_up([column, 0, column, grid.height])
   end
 
   # Returns a horizontal line for a column of the first grid
-  def bfs_horizontal_line row
-    bfs_scale_up([0, row, grid.width, row])
+  def dijkstra_horizontal_line row
+    dijkstra_scale_up([0, row, grid.width, row])
   end
 
   # Returns a vertical line for a column of the second grid
   def greedy_vertical_line column
-    bfs_scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
+    dijkstra_scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
   end
 
   # Returns a horizontal line for a column of the second grid
   def greedy_horizontal_line row
-    bfs_scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
+    dijkstra_scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
   end
 
   # Renders the star on the first grid
-  def render_bfs_star
-    outputs.sprites << [bfs_scale_up(grid.star), 'star.png']
+  def render_dijkstra_star
+    outputs.sprites << [dijkstra_scale_up(grid.star), 'star.png']
   end
 
   # Renders the star on the second grid
@@ -274,8 +275,8 @@ class A_Star
   end
 
   # Renders the target on the first grid
-  def render_bfs_target
-    outputs.sprites << [bfs_scale_up(grid.target), 'target.png']
+  def render_dijkstra_target
+    outputs.sprites << [dijkstra_scale_up(grid.target), 'target.png']
   end
   
   # Renders the target on the second grid
@@ -284,9 +285,9 @@ class A_Star
   end
 
   # Renders the walls on the first grid
-  def render_bfs_walls
+  def render_dijkstra_walls
     grid.walls.each_key do | wall | 
-      outputs.solids << [bfs_scale_up(wall), wall_color]
+      outputs.solids << [dijkstra_scale_up(wall), wall_color]
     end
   end
 
@@ -298,9 +299,9 @@ class A_Star
   end
 
   # Renders the visited cells on the first grid
-  def render_bfs_visited
-    bfs.came_from.each_key do | visited_cell |
-      outputs.solids << [bfs_scale_up(visited_cell), visited_color]
+  def render_dijkstra_visited
+    dijkstra.came_from.each_key do | visited_cell |
+      outputs.solids << [dijkstra_scale_up(visited_cell), visited_color]
     end
   end
 
@@ -312,9 +313,9 @@ class A_Star
   end
 
   # Renders the frontier cells on the first grid
-  def render_bfs_frontier
-    bfs.frontier.each do | frontier_cell | 
-      outputs.solids << [bfs_scale_up(frontier_cell), frontier_color, 200]
+  def render_dijkstra_frontier
+    dijkstra.frontier.each do | frontier_cell | 
+      outputs.solids << [dijkstra_scale_up(frontier_cell), frontier_color, 200]
     end
   end
 
@@ -326,9 +327,9 @@ class A_Star
   end
 
   # Renders the path found by the breadth first search on the first grid
-  def render_bfs_path
-    bfs.path.each do | path |
-      outputs.solids << [bfs_scale_up(path), path_color]
+  def render_dijkstra_path
+    dijkstra.path.each do | path |
+      outputs.solids << [dijkstra_scale_up(path), path_color]
     end
   end
 
@@ -370,7 +371,7 @@ class A_Star
   # Objects are scaled up according to the grid.cell_size variable
   # This allows for easy customization of the visual scale of the grid
   # This method scales up cells for the first grid
-  def bfs_scale_up(cell)
+  def dijkstra_scale_up(cell)
     # Prevents the original value of cell from being edited
     cell = cell.clone
 
@@ -398,12 +399,12 @@ class A_Star
     # Translates the cell to the second grid equivalent
     cell.x += grid.width + 1
     # Proceeds as if scaling up for the first grid
-    bfs_scale_up(cell)
+    dijkstra_scale_up(cell)
   end
 
   # Signal that the user is going to be moving the star from the first grid
-  def bfs_mouse_over_star?
-    inputs.mouse.point.inside_rect?(bfs_scale_up(grid.star))
+  def dijkstra_mouse_over_star?
+    inputs.mouse.point.inside_rect?(dijkstra_scale_up(grid.star))
   end
 
   # Signal that the user is going to be moving the star from the second grid
@@ -412,8 +413,8 @@ class A_Star
   end
 
   # Signal that the user is going to be moving the target from the first grid
-  def bfs_mouse_over_target?
-    inputs.mouse.point.inside_rect?(bfs_scale_up(grid.target))
+  def dijkstra_mouse_over_target?
+    inputs.mouse.point.inside_rect?(dijkstra_scale_up(grid.target))
   end
 
   # Signal that the user is going to be moving the target from the second grid
@@ -422,9 +423,9 @@ class A_Star
   end
 
   # Signal that the user is going to be removing walls from the first grid
-  def bfs_mouse_over_wall?
+  def dijkstra_mouse_over_wall?
     grid.walls.each_key do | wall |
-      return true if inputs.mouse.point.inside_rect?(bfs_scale_up(wall))
+      return true if inputs.mouse.point.inside_rect?(dijkstra_scale_up(wall))
     end
 
     false
@@ -440,8 +441,8 @@ class A_Star
   end
 
   # Signal that the user is going to be adding walls from the first grid
-  def bfs_mouse_over_grid?
-    inputs.mouse.point.inside_rect?(bfs_scale_up(grid.rect))
+  def dijkstra_mouse_over_grid?
+    inputs.mouse.point.inside_rect?(dijkstra_scale_up(grid.rect))
   end
 
   # Signal that the user is going to be adding walls from the second grid
@@ -452,10 +453,10 @@ class A_Star
   # Moves the star to the cell closest to the mouse in the first grid
   # Only resets the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
-  def process_input_bfs_star
+  def process_input_dijkstra_star
     old_star = grid.star.clone 
-    unless bfs_cell_closest_to_mouse == grid.target
-      grid.star = bfs_cell_closest_to_mouse 
+    unless dijkstra_cell_closest_to_mouse == grid.target
+      grid.star = dijkstra_cell_closest_to_mouse 
     end
     unless old_star == grid.star 
       reset_searches 
@@ -478,10 +479,10 @@ class A_Star
   # Moves the target to the grid closest to the mouse in the first grid
   # Only reset_searchess the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
-  def process_input_bfs_target
+  def process_input_dijkstra_target
     old_target = grid.target.clone 
-    unless bfs_cell_closest_to_mouse == grid.star
-      grid.target = bfs_cell_closest_to_mouse
+    unless dijkstra_cell_closest_to_mouse == grid.star
+      grid.target = dijkstra_cell_closest_to_mouse
     end
     unless old_target == grid.target 
       reset_searches 
@@ -502,13 +503,13 @@ class A_Star
   end
 
   # Removes walls in the first grid that are under the cursor
-  def process_input_bfs_remove_wall
+  def process_input_dijkstra_remove_wall
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
-    if bfs_mouse_over_grid? 
-      if grid.walls.has_key?(bfs_cell_closest_to_mouse)
-        grid.walls.delete(bfs_cell_closest_to_mouse) 
+    if dijkstra_mouse_over_grid? 
+      if grid.walls.has_key?(dijkstra_cell_closest_to_mouse)
+        grid.walls.delete(dijkstra_cell_closest_to_mouse) 
         reset_searches 
       end
     end
@@ -527,10 +528,10 @@ class A_Star
     end
   end
   # Adds a wall in the first grid in the cell the mouse is over
-  def process_input_bfs_add_wall
-    if bfs_mouse_over_grid? 
-      unless grid.walls.has_key?(bfs_cell_closest_to_mouse)
-        grid.walls[bfs_cell_closest_to_mouse] = true 
+  def process_input_dijkstra_add_wall
+    if dijkstra_mouse_over_grid? 
+      unless grid.walls.has_key?(dijkstra_cell_closest_to_mouse)
+        grid.walls[dijkstra_cell_closest_to_mouse] = true 
         reset_searches 
       end
     end
@@ -549,7 +550,7 @@ class A_Star
   # When the user grabs the star and puts their cursor to the far right
   # and moves up and down, the star is supposed to move along the grid as well
   # Finding the cell closest to the mouse helps with this
-  def bfs_cell_closest_to_mouse
+  def dijkstra_cell_closest_to_mouse
     # Closest cell to the mouse in the first grid
     x = (inputs.mouse.point.x / grid.cell_size).to_i 
     y = (inputs.mouse.point.y / grid.cell_size).to_i 
@@ -580,9 +581,11 @@ class A_Star
 
   def reset_searches
     # Reset the searches
-    bfs.came_from    = {}
-    bfs.frontier     = []
-    bfs.path         = []
+    dijkstra.came_from      = {}
+    dijkstra.cost_so_far    = {}
+    dijkstra.frontier       = []
+    dijkstra.path           = []
+
     greedy.came_from = {}
     greedy.frontier  = []
     greedy.path      = []
@@ -592,41 +595,45 @@ class A_Star
   end
 
   def calc_searches
-    calc_bfs
+    calc_dijkstra
     calc_greedy
     calc_a_star
     # Move the searches forward to the current step
     state.current_step.times { move_searches_one_step_forward }
   end
 
-  def calc_bfs
+  def calc_dijkstra
     # Sets up the search to begin from the star
-    bfs.frontier << grid.star                   
-    bfs.came_from[grid.star] = nil              
+    dijkstra.frontier << grid.star                   
+    dijkstra.came_from[grid.star] = nil              
+    dijkstra.cost_so_far[grid.star] = 0              
 
     # Until the target is found or there are no more cells to explore from
-    until bfs.came_from.has_key?(grid.target) or bfs.frontier.empty?
-      # Take the next frontier cell
-      new_frontier = bfs.frontier.shift 
+    until dijkstra.came_from.has_key?(grid.target) or dijkstra.frontier.empty?
+      # Take the next frontier cell. The first element is the cell, the second is the priority.
+      new_frontier = dijkstra.frontier.shift#[0]
       # For each of its neighbors
       adjacent_neighbors(new_frontier).each do | neighbor | 
         # That have not been visited and are not walls
-        unless bfs.came_from.has_key?(neighbor) or grid.walls.has_key?(neighbor) 
+        unless dijkstra.came_from.has_key?(neighbor) or grid.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited
-          bfs.frontier << neighbor 
-          bfs.came_from[neighbor] = new_frontier 
+          dijkstra.frontier << neighbor
+          dijkstra.came_from[neighbor] = new_frontier 
+          dijkstra.cost_so_far[neighbor] = dijkstra.cost_so_far[new_frontier] + 1
         end
       end
+
       # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
       # Comment this line and let a path generate to see the difference
-      bfs.frontier = bfs.frontier.sort_by {| cell | proximity_to_star(cell) }
+      dijkstra.frontier = dijkstra.frontier.sort_by {| cell | proximity_to_star(cell) }
+      dijkstra.frontier = dijkstra.frontier.sort_by {| cell | dijkstra.cost_so_far[cell] }
     end
 
 
     # If the search found the target
-    if bfs.came_from.has_key?(grid.target)
+    if dijkstra.came_from.has_key?(grid.target)
       # Calculate the path between the target and star
-      bfs_calc_path
+      dijkstra_calc_path
     end
   end
 
@@ -668,18 +675,18 @@ class A_Star
 
   # Calculates the path between the target and star for the breadth first search
   # Only called when the breadth first search finds the target
-  def bfs_calc_path
+  def dijkstra_calc_path
     # Start from the target
     endpoint = grid.target
     # And the cell it came from
-    next_endpoint = bfs.came_from[endpoint]
+    next_endpoint = dijkstra.came_from[endpoint]
     while endpoint and next_endpoint
       # Draw a path between these two cells and store it
       path = get_path_between(endpoint, next_endpoint)
-      bfs.path << path
+      dijkstra.path << path
       # And get the next pair of cells
       endpoint = next_endpoint
-      next_endpoint = bfs.came_from[endpoint]
+      next_endpoint = dijkstra.came_from[endpoint]
       # Continue till there are no more cells
     end
   end
@@ -745,8 +752,8 @@ class A_Star
     state.grid
   end
 
-  def bfs
-    state.bfs
+  def dijkstra
+    state.dijkstra
   end
 
   def greedy
