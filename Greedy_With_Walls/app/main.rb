@@ -479,9 +479,6 @@ class Greedy
       path = [cell_one.x + 0.3, cell_one.y + 0.3, 1.4, 0.4]
     end
 
-    if path == []
-      puts cell_one.to_s + " " + cell_two.to_s
-    end
     path
   end
 
