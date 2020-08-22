@@ -100,8 +100,9 @@ class A_Star_Algorithm
   end
 
   def render_labels
-    outputs.labels << [205, 625, "Breadth First Search"]
-    outputs.labels << [820, 625, "Greedy Best-First Search"]
+    outputs.labels << [150, 450, "Dijkstra's"]
+    outputs.labels << [550, 450, "Greedy Best-First"]
+    outputs.labels << [1025, 450, "A* Search"]
   end
 
   def render_dijkstra
