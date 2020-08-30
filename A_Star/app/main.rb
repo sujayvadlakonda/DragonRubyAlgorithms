@@ -1,10 +1,10 @@
 # This program is inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
-# The effectiveness of the Greedy search algorithm is shown through this demonstration.
-# Notice that both searches find the shortest path
-# The greedy search, however, explores less of the grid, and is therefore faster.
-# The greedy search prioritizes searching cells that are closer to the target.
-# Make sure to look at the Greedy with walls program to see some of the downsides of the greedy algorithm.
+# The A* Search works by incorporating both the distance from the starting point
+# and the distance from the target in its heurisitic.
+
+# It tends to find the correct (shortest) path even when the Greedy Best-First Search does not,
+# and it explores less of the grid, and is therefore faster, than Dijkstra's Search.
 
 class A_Star_Algorithm
   attr_gtk
