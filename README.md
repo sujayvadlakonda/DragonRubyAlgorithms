@@ -26,8 +26,8 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 # Heuristic
 ![](gifs/Heuristic.gif)
 
-# Greedy With Walls
-![](gifs/Greedy_With_Walls.gif)
+# Heuristic With Walls
+![](gifs/Heuristic_With_Walls.gif)
 
 # A*
 ![](gifs/A_Star.gif)
