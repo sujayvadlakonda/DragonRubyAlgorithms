@@ -3,9 +3,9 @@
 # This time the heuristic search still explored less of the grid, hence finishing faster.
 # However, it did not find the shortest path between the star and the target.
 
-# The only difference between this app and Heurisitc is the change of the starting position.
+# The only difference between this app and Heuristic is the change of the starting position.
 
-class Heurisitc_With_Walls
+class Heuristic_With_Walls
   attr_gtk
 
   def tick
@@ -32,7 +32,7 @@ class Heurisitc_With_Walls
     grid.star      ||= [0, 2]
     grid.target    ||= [14, 12]
     grid.walls     ||= {}
-    # There are no hills in the Heurisitc Search Demo
+    # There are no hills in the Heuristic Search Demo
 
     # What the user is currently editing on the grid
     # We store this value, because we want to remember the value even when
@@ -251,7 +251,7 @@ class Heurisitc_With_Walls
 
   def render_labels
     outputs.labels << [205, 625, "Breadth First Search"]
-    outputs.labels << [820, 625, "Heurisitc Best-First Search"]
+    outputs.labels << [820, 625, "Heuristic Best-First Search"]
   end
 
   def render_left_button
@@ -969,7 +969,7 @@ def tick args
   end
 
   # Every tick, new args are passed, and the Breadth First Search tick is called
-  $heuristic_with_walls ||= Heurisitc_With_Walls.new(args)
+  $heuristic_with_walls ||= Heuristic_With_Walls.new(args)
   $heuristic_with_walls.args = args
   $heuristic_with_walls.tick
 end

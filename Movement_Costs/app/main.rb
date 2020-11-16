@@ -10,7 +10,7 @@
 # The heat map will darken based on movement cost.
 
 # Dark green cells are walls, and the search cannot go through them.
-class Dijkstra
+class Movement_Costs
   attr_gtk
 
   # This method is called every frame/tick
@@ -833,12 +833,12 @@ def tick args
   end
 
   # Every tick, new args are passed, and the Dijkstra tick method is called
-  $dijkstra ||= Dijkstra.new(args)
-  $dijkstra.args = args
-  $dijkstra.tick
+  $movement_costs ||= Movement_Costs.new(args)
+  $movement_costs.args = args
+  $movement_costs.tick
 end
 
 
 def reset
-  $dijkstra = nil
+  $movement_costs = nil
 end
