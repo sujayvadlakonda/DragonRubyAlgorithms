@@ -14,10 +14,8 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 # Breadth First Search
 ![](gifs/Breadth_First_Search.gif)
 
-
 # Detailed Breadth First Search
 ![](gifs/Detailed_Breadth_First_Search.gif)
-
 
 # Early Exit Breadth First Search
 ![](gifs/Early_Exit_Breadth_First_Search.gif)
@@ -31,3 +29,5 @@ Based off of https://www.redblobgames.com/pathfinding/a-star/introduction.html
 # Greedy With Walls
 ![](gifs/Greedy_With_Walls.gif)
 
+# A*
+![](gifs/A_Star.gif)
