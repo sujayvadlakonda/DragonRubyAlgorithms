@@ -1,11 +1,11 @@
 # This program is inspired by https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
-# This time the greedy search still explored less of the grid, hence finishing faster.
+# This time the heuristic search still explored less of the grid, hence finishing faster.
 # However, it did not find the shortest path between the star and the target.
 
-# The only difference between this app and Greedy is the change of the starting position.
+# The only difference between this app and Heurisitc is the change of the starting position.
 
-class Greedy_With_Walls
+class Heurisitc_With_Walls
   attr_gtk
 
   def tick
@@ -32,7 +32,7 @@ class Greedy_With_Walls
     grid.star      ||= [0, 2]
     grid.target    ||= [14, 12]
     grid.walls     ||= {}
-    # There are no hills in the Greedy Search Demo
+    # There are no hills in the Heurisitc Search Demo
 
     # What the user is currently editing on the grid
     # We store this value, because we want to remember the value even when
@@ -52,9 +52,9 @@ class Greedy_With_Walls
     bfs.frontier   ||= []
     bfs.path       ||= []
 
-    greedy.came_from ||= {}
-    greedy.frontier  ||= []
-    greedy.path      ||= []
+    heuristic.came_from ||= {}
+    heuristic.frontier  ||= []
+    heuristic.path      ||= []
 
     # Stores which step of the animation is being rendered
     # When the user moves the star or messes with the walls,
@@ -117,7 +117,7 @@ class Greedy_With_Walls
   def render
     render_ui
     render_bfs
-    render_greedy
+    render_heuristic
   end
 
   def render_ui
@@ -142,14 +142,14 @@ class Greedy_With_Walls
     render_bfs_path
   end
 
-  def render_greedy
-    render_greedy_grid
-    render_greedy_star
-    render_greedy_target
-    render_greedy_visited
-    render_greedy_walls
-    render_greedy_frontier
-    render_greedy_path
+  def render_heuristic
+    render_heuristic_grid
+    render_heuristic_star
+    render_heuristic_target
+    render_heuristic_visited
+    render_heuristic_walls
+    render_heuristic_frontier
+    render_heuristic_path
   end
 
   # This method handles user input every tick
@@ -183,33 +183,33 @@ class Greedy_With_Walls
       # The user is editing the star from the first grid
       state.user_input = :bfs_star          
     # If the mouse is over the star in the second grid
-    elsif greedy_mouse_over_star?                 
+    elsif heuristic_mouse_over_star?                 
       # The user is editing the star from the second grid
-      state.user_input = :greedy_star          
+      state.user_input = :heuristic_star          
     # If the mouse is over the target in the first grid
     elsif bfs_mouse_over_target?                 
       # The user is editing the target from the first grid
       state.user_input = :bfs_target          
     # If the mouse is over the target in the second grid
-    elsif greedy_mouse_over_target?                 
+    elsif heuristic_mouse_over_target?                 
       # The user is editing the target from the second grid
-      state.user_input = :greedy_target 
+      state.user_input = :heuristic_target 
     # If the mouse is over a wall in the first grid
     elsif bfs_mouse_over_wall?                 
       # The user is removing a wall from the first grid
       state.user_input = :bfs_remove_wall   
     # If the mouse is over a wall in the second grid
-    elsif greedy_mouse_over_wall?                 
+    elsif heuristic_mouse_over_wall?                 
       # The user is removing a wall from the second grid
-      state.user_input = :greedy_remove_wall
+      state.user_input = :heuristic_remove_wall
     # If the mouse is over the first grid
     elsif bfs_mouse_over_grid?                 
       # The user is adding a wall from the first grid
       state.user_input = :bfs_add_wall
     # If the mouse is over the second grid
-    elsif greedy_mouse_over_grid?                 
+    elsif heuristic_mouse_over_grid?                 
       # The user is adding a wall from the second grid
-      state.user_input = :greedy_add_wall
+      state.user_input = :heuristic_add_wall
     end
   end
 
@@ -219,20 +219,20 @@ class Greedy_With_Walls
       process_input_slider
     elsif state.user_input == :bfs_star         
       process_input_bfs_star                            
-    elsif state.user_input == :greedy_star
-      process_input_greedy_star                            
+    elsif state.user_input == :heuristic_star
+      process_input_heuristic_star                            
     elsif state.user_input == :bfs_target         
       process_input_bfs_target                            
-    elsif state.user_input == :greedy_target         
-      process_input_greedy_target                            
+    elsif state.user_input == :heuristic_target         
+      process_input_heuristic_target                            
     elsif state.user_input == :bfs_remove_wall  
       process_input_bfs_remove_wall                     
-    elsif state.user_input == :greedy_remove_wall
-      process_input_greedy_remove_wall                     
+    elsif state.user_input == :heuristic_remove_wall
+      process_input_heuristic_remove_wall                     
     elsif state.user_input == :bfs_add_wall     
       process_input_bfs_add_wall                        
-    elsif state.user_input == :greedy_add_wall     
-      process_input_greedy_add_wall                        
+    elsif state.user_input == :heuristic_add_wall     
+      process_input_heuristic_add_wall                        
     end
   end
 
@@ -251,7 +251,7 @@ class Greedy_With_Walls
 
   def render_labels
     outputs.labels << [205, 625, "Breadth First Search"]
-    outputs.labels << [820, 625, "Greedy Best-First Search"]
+    outputs.labels << [820, 625, "Heurisitc Best-First Search"]
   end
 
   def render_left_button
@@ -313,18 +313,18 @@ class Greedy_With_Walls
     end
   end
 
-  def render_greedy_grid
+  def render_heuristic_grid
     # A large rect the size of the grid
-    outputs.solids << [greedy_scale_up(grid.rect), default_color]
+    outputs.solids << [heuristic_scale_up(grid.rect), default_color]
 
     # The vertical grid lines
     for x in 0..grid.width
-      outputs.lines << greedy_vertical_line(x)
+      outputs.lines << heuristic_vertical_line(x)
     end
 
     # The horizontal grid lines
     for y in 0..grid.height
-      outputs.lines << greedy_horizontal_line(y) 
+      outputs.lines << heuristic_horizontal_line(y) 
     end
   end
     
@@ -339,12 +339,12 @@ class Greedy_With_Walls
   end
 
   # Returns a vertical line for a column of the second grid
-  def greedy_vertical_line column
+  def heuristic_vertical_line column
     bfs_scale_up([column + grid.width + 1, 0, column + grid.width + 1, grid.height])
   end
 
   # Returns a horizontal line for a column of the second grid
-  def greedy_horizontal_line row
+  def heuristic_horizontal_line row
     bfs_scale_up([grid.width + 1, row, grid.width + grid.width + 1, row])
   end
 
@@ -354,8 +354,8 @@ class Greedy_With_Walls
   end
 
   # Renders the star on the second grid
-  def render_greedy_star
-    outputs.sprites << [greedy_scale_up(grid.star), 'star.png']
+  def render_heuristic_star
+    outputs.sprites << [heuristic_scale_up(grid.star), 'star.png']
   end
 
   # Renders the target on the first grid
@@ -364,8 +364,8 @@ class Greedy_With_Walls
   end
   
   # Renders the target on the second grid
-  def render_greedy_target
-    outputs.sprites << [greedy_scale_up(grid.target), 'target.png']
+  def render_heuristic_target
+    outputs.sprites << [heuristic_scale_up(grid.target), 'target.png']
   end
 
   # Renders the walls on the first grid
@@ -376,9 +376,9 @@ class Greedy_With_Walls
   end
 
   # Renders the walls on the second grid
-  def render_greedy_walls
+  def render_heuristic_walls
     grid.walls.each_key do | wall | 
-      outputs.solids << [greedy_scale_up(wall), wall_color]
+      outputs.solids << [heuristic_scale_up(wall), wall_color]
     end
   end
 
@@ -390,9 +390,9 @@ class Greedy_With_Walls
   end
 
   # Renders the visited cells on the second grid
-  def render_greedy_visited
-    greedy.came_from.each_key do | visited_cell |
-      outputs.solids << [greedy_scale_up(visited_cell), visited_color]
+  def render_heuristic_visited
+    heuristic.came_from.each_key do | visited_cell |
+      outputs.solids << [heuristic_scale_up(visited_cell), visited_color]
     end
   end
 
@@ -404,9 +404,9 @@ class Greedy_With_Walls
   end
 
   # Renders the frontier cells on the second grid
-  def render_greedy_frontier
-    greedy.frontier.each do | frontier_cell | 
-      outputs.solids << [greedy_scale_up(frontier_cell), frontier_color, 200]
+  def render_heuristic_frontier
+    heuristic.frontier.each do | frontier_cell | 
+      outputs.solids << [heuristic_scale_up(frontier_cell), frontier_color, 200]
     end
   end
 
@@ -417,10 +417,10 @@ class Greedy_With_Walls
     end
   end
 
-  # Renders the path found by the greedy search on the second grid
-  def render_greedy_path
-    greedy.path.each do | path |
-      outputs.solids << [greedy_scale_up(path), path_color]
+  # Renders the path found by the heuristic search on the second grid
+  def render_heuristic_path
+    heuristic.path.each do | path |
+      outputs.solids << [heuristic_scale_up(path), path_color]
     end
   end
 
@@ -477,7 +477,7 @@ class Greedy_With_Walls
   # Used to draw cells for the second grid
   # This method does not work for lines,
   # so separate methods exist for the grid lines
-  def greedy_scale_up(cell)
+  def heuristic_scale_up(cell)
     # Prevents the original value of cell from being edited
     cell = cell.clone
     # Translates the cell to the second grid equivalent
@@ -551,8 +551,8 @@ class Greedy_With_Walls
   end
 
   # Signal that the user is going to be moving the star from the second grid
-  def greedy_mouse_over_star?
-    inputs.mouse.point.inside_rect?(greedy_scale_up(grid.star))
+  def heuristic_mouse_over_star?
+    inputs.mouse.point.inside_rect?(heuristic_scale_up(grid.star))
   end
 
   # Signal that the user is going to be moving the target from the first grid
@@ -561,8 +561,8 @@ class Greedy_With_Walls
   end
 
   # Signal that the user is going to be moving the target from the second grid
-  def greedy_mouse_over_target?
-    inputs.mouse.point.inside_rect?(greedy_scale_up(grid.target))
+  def heuristic_mouse_over_target?
+    inputs.mouse.point.inside_rect?(heuristic_scale_up(grid.target))
   end
 
   # Signal that the user is going to be removing walls from the first grid
@@ -575,9 +575,9 @@ class Greedy_With_Walls
   end
 
   # Signal that the user is going to be removing walls from the second grid
-  def greedy_mouse_over_wall?
+  def heuristic_mouse_over_wall?
     grid.walls.each_key do | wall |
-      return true if inputs.mouse.point.inside_rect?(greedy_scale_up(wall))
+      return true if inputs.mouse.point.inside_rect?(heuristic_scale_up(wall))
     end
 
     false
@@ -589,8 +589,8 @@ class Greedy_With_Walls
   end
 
   # Signal that the user is going to be adding walls from the second grid
-  def greedy_mouse_over_grid?
-    inputs.mouse.point.inside_rect?(greedy_scale_up(grid.rect))
+  def heuristic_mouse_over_grid?
+    inputs.mouse.point.inside_rect?(heuristic_scale_up(grid.rect))
   end
 
   # This method is called when the user is editing the slider
@@ -628,10 +628,10 @@ class Greedy_With_Walls
   # Moves the star to the cell closest to the mouse in the second grid
   # Only resets the search if the star changes position
   # Called whenever the user is editing the star (puts mouse down on star)
-  def process_input_greedy_star
+  def process_input_heuristic_star
     old_star = grid.star.clone 
-    unless greedy_cell_closest_to_mouse == grid.target
-      grid.star = greedy_cell_closest_to_mouse
+    unless heuristic_cell_closest_to_mouse == grid.target
+      grid.star = heuristic_cell_closest_to_mouse
     end
     unless old_star == grid.star 
       recalculate_searches 
@@ -654,10 +654,10 @@ class Greedy_With_Walls
   # Moves the target to the cell closest to the mouse in the second grid
   # Only recalculate_searchess the search if the target changes position
   # Called whenever the user is editing the target (puts mouse down on target)
-  def process_input_greedy_target
+  def process_input_heuristic_target
     old_target = grid.target.clone 
-    unless greedy_cell_closest_to_mouse == grid.star
-      grid.target = greedy_cell_closest_to_mouse
+    unless heuristic_cell_closest_to_mouse == grid.star
+      grid.target = heuristic_cell_closest_to_mouse
     end
     unless old_target == grid.target 
       recalculate_searches 
@@ -678,13 +678,13 @@ class Greedy_With_Walls
   end
 
   # Removes walls in the second grid that are under the cursor
-  def process_input_greedy_remove_wall
+  def process_input_heuristic_remove_wall
     # The mouse needs to be inside the grid, because we only want to remove walls
     # the cursor is directly over
     # Recalculations should only occur when a wall is actually deleted
-    if greedy_mouse_over_grid? 
-      if grid.walls.has_key?(greedy_cell_closest_to_mouse)
-        grid.walls.delete(greedy_cell_closest_to_mouse) 
+    if heuristic_mouse_over_grid? 
+      if grid.walls.has_key?(heuristic_cell_closest_to_mouse)
+        grid.walls.delete(heuristic_cell_closest_to_mouse) 
         recalculate_searches 
       end
     end
@@ -700,10 +700,10 @@ class Greedy_With_Walls
   end
 
   # Adds a wall in the second grid in the cell the mouse is over
-  def process_input_greedy_add_wall
-    if greedy_mouse_over_grid? 
-      unless grid.walls.has_key?(greedy_cell_closest_to_mouse)
-        grid.walls[greedy_cell_closest_to_mouse] = true 
+  def process_input_heuristic_add_wall
+    if heuristic_mouse_over_grid? 
+      unless grid.walls.has_key?(heuristic_cell_closest_to_mouse)
+        grid.walls[heuristic_cell_closest_to_mouse] = true 
         recalculate_searches 
       end
     end
@@ -726,7 +726,7 @@ class Greedy_With_Walls
   # When the user grabs the star and puts their cursor to the far right
   # and moves up and down, the star is supposed to move along the grid as well
   # Finding the cell closest to the mouse in the second grid helps with this
-  def greedy_cell_closest_to_mouse
+  def heuristic_cell_closest_to_mouse
     # Closest cell grid to the mouse in the second
     x = (inputs.mouse.point.x / grid.cell_size).to_i 
     y = (inputs.mouse.point.y / grid.cell_size).to_i 
@@ -746,9 +746,9 @@ class Greedy_With_Walls
     bfs.came_from    = {}
     bfs.frontier     = []
     bfs.path         = []
-    greedy.came_from = {}
-    greedy.frontier  = []
-    greedy.path      = []
+    heuristic.came_from = {}
+    heuristic.frontier  = []
+    heuristic.path      = []
 
     # Move the searches forward to the current step
     state.current_step.times { move_searches_one_step_forward }
@@ -756,7 +756,7 @@ class Greedy_With_Walls
 
   def move_searches_one_step_forward
     bfs_one_step_forward
-    greedy_one_step_forward
+    heuristic_one_step_forward
   end
 
   def bfs_one_step_forward
@@ -812,69 +812,69 @@ class Greedy_With_Walls
     end
   end
 
-  # Moves the greedy search forward one step
+  # Moves the heuristic search forward one step
   # Can be called from tick while the animation is playing
   # Can also be called when recalculating the searches after the user edited the grid
-  def greedy_one_step_forward
+  def heuristic_one_step_forward
     # Stop the search if the target has been found
-    return if greedy.came_from.has_key?(grid.target)
+    return if heuristic.came_from.has_key?(grid.target)
 
     # If the search has not begun
-    if greedy.came_from.empty?
+    if heuristic.came_from.empty?
       # Setup the search to begin from the star
-      greedy.frontier << grid.star
-      greedy.came_from[grid.star] = nil
+      heuristic.frontier << grid.star
+      heuristic.came_from[grid.star] = nil
     end
 
-    # One step in the greedy search
+    # One step in the heuristic search
 
     # Unless there are no more cells to explore from
-    unless greedy.frontier.empty?
+    unless heuristic.frontier.empty?
       # Get the next cell to explore from
-      new_frontier = greedy.frontier.shift
+      new_frontier = heuristic.frontier.shift
       # For each of its neighbors
       adjacent_neighbors(new_frontier).each do |neighbor| 
         # That have not been visited and are not walls
-        unless greedy.came_from.has_key?(neighbor) || grid.walls.has_key?(neighbor) 
+        unless heuristic.came_from.has_key?(neighbor) || grid.walls.has_key?(neighbor) 
           # Add them to the frontier and mark them as visited
-          greedy.frontier << neighbor 
-          greedy.came_from[neighbor] = new_frontier 
+          heuristic.frontier << neighbor 
+          heuristic.came_from[neighbor] = new_frontier 
         end
       end
     end
 
     # Sort the frontier so that cells that are in a zigzag pattern are prioritized over those in an line
-    greedy.frontier = greedy.frontier.sort_by {| cell | proximity_to_star(cell) }
+    heuristic.frontier = heuristic.frontier.sort_by {| cell | proximity_to_star(cell) }
     # Sort the frontier so cells that are close to the target are then prioritized
-    greedy.frontier = greedy.frontier.sort_by {| cell | greedy_heuristic(cell)  }
+    heuristic.frontier = heuristic.frontier.sort_by {| cell | heuristic_heuristic(cell)  }
 
     # If the search found the target
-    if greedy.came_from.has_key?(grid.target)
+    if heuristic.came_from.has_key?(grid.target)
       # Calculate the path between the target and star
-      greedy_calc_path
+      heuristic_calc_path
     end
   end
 
   # Returns one-dimensional absolute distance between cell and target
   # Returns a number to compare distances between cells and the target
-  def greedy_heuristic(cell)
+  def heuristic_heuristic(cell)
     (grid.target.x - cell.x).abs + (grid.target.y - cell.y).abs
   end
 
-  # Calculates the path between the target and star for the greedy search
-  # Only called when the greedy search finds the target
-  def greedy_calc_path
+  # Calculates the path between the target and star for the heuristic search
+  # Only called when the heuristic search finds the target
+  def heuristic_calc_path
     # Start from the target
     endpoint = grid.target
     # And the cell it came from
-    next_endpoint = greedy.came_from[endpoint]
+    next_endpoint = heuristic.came_from[endpoint]
     while endpoint and next_endpoint
       # Draw a path between these two cells and store it
       path = get_path_between(endpoint, next_endpoint)
-      greedy.path << path
+      heuristic.path << path
       # And get the next pair of cells
       endpoint = next_endpoint
-      next_endpoint = greedy.came_from[endpoint]
+      next_endpoint = heuristic.came_from[endpoint]
       # Continue till there are no more cells
     end
   end
@@ -928,8 +928,8 @@ class Greedy_With_Walls
     state.bfs
   end
 
-  def greedy
-    state.greedy
+  def heuristic
+    state.heuristic
   end
 
   # Descriptive aliases for colors
@@ -969,12 +969,12 @@ def tick args
   end
 
   # Every tick, new args are passed, and the Breadth First Search tick is called
-  $greedy_with_walls ||= Greedy_With_Walls.new(args)
-  $greedy_with_walls.args = args
-  $greedy_with_walls.tick
+  $heuristic_with_walls ||= Heurisitc_With_Walls.new(args)
+  $heuristic_with_walls.args = args
+  $heuristic_with_walls.tick
 end
 
 
 def reset
-  $greedy_with_walls = nil
+  $heuristic_with_walls = nil
 end
