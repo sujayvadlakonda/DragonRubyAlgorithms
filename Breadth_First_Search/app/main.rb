@@ -293,22 +293,22 @@ class BreadthFirstSearch
   # Draws the area that is going to be searched from
   # The frontier is the most outward parts of the search
   def render_frontier
-    state.frontier.each do |cell| 
-      outputs.solids << [scale_up(cell), frontier_color]
+    outputs.solids << state.frontier.map do |cell|
+      [scale_up(cell), frontier_color]
     end
   end
 
   # Draws the walls
   def render_walls
-    state.walls.each_key do |wall| 
-      outputs.solids << [scale_up(wall), wall_color]
+    outputs.solids << state.walls.map do |wall|
+      [scale_up(wall), wall_color]
     end
   end
 
   # Renders cells that have been searched in the appropriate color
   def render_visited
-    state.visited.each_key do |cell| 
-      outputs.solids << [scale_up(cell), visited_color]
+    outputs.solids << state.visited.map do |cell|
+      [scale_up(cell), visited_color]
     end
   end
 
